@@ -1,0 +1,23 @@
+{
+  "name": "@flyto/plugin-slack",
+  "version": "0.1.0",
+  "description": "Flyto2 Slack integration plugin",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "flyto",
+    "plugin",
+    "slack"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@flyto/plugin-sdk": "*",
+    "@slack/web-api": "^7.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

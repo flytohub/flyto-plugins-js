@@ -1,0 +1,66 @@
+id: flyto-community/slack
+name: Slack
+version: 0.1.0
+description: Send messages and manage channels in Slack
+
+runtime:
+  language: node
+  entry_point: dist/index.js
+  min_flyto_version: "2.25.0"
+
+steps:
+  - id: send_message
+    label: Send Message
+    description: Send a message to a Slack channel
+    category: notification
+    icon: MessageSquare
+    color: "#4A154B"
+    can_receive_from: ["*"]
+    can_connect_to: ["*"]
+    params_schema:
+      channel:
+        type: string
+        label: Channel
+        description: Slack channel name or ID
+        required: true
+        placeholder: "#general"
+      message:
+        type: string
+        label: Message
+        description: Message text (supports Slack markdown)
+        required: true
+        placeholder: "Hello from Flyto2!"
+      thread_ts:
+        type: string
+        label: Thread ID
+        description: Reply in a thread (optional)
+        required: false
+    output_schema:
+      ts:
+        type: string
+        description: Message timestamp ID
+      channel:
+        type: string
+        description: Channel where message was posted
+
+  - id: list_channels
+    label: List Channels
+    description: List all public channels in the workspace
+    category: notification
+    icon: List
+    color: "#4A154B"
+    can_receive_from: ["*"]
+    can_connect_to: ["*"]
+    params_schema:
+      limit:
+        type: number
+        label: Limit
+        description: Maximum number of channels to return
+        default: 100
+    output_schema:
+      channels:
+        type: array
+        description: List of channel objects
+
+required_secrets:
+  - SLACK_BOT_TOKEN
