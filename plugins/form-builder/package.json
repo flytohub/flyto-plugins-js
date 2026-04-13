@@ -1,24 +1,18 @@
 {
-  "name": "@flyto/plugin-slack",
+  "name": "@flyto/plugin-form-builder",
   "version": "0.1.0",
-  "description": "Flyto2 Slack integration plugin",
+  "description": "Interactive form builder and collector for Flyto2 workflows",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "test": "node --test dist/**/*.test.js",
     "start": "node dist/index.js"
   },
-  "keywords": [
-    "flyto",
-    "plugin",
-    "slack"
-  ],
-  "license": "Apache-2.0",
   "dependencies": {
-    "@flyto/plugin-sdk": "^0.1.0",
-    "@slack/web-api": "^7.0.0"
+    "@flyto/plugin-sdk": "^0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
-  }
+  },
+  "license": "Apache-2.0"
 }

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flyto — Crop Image</title>
+  <style>
+    /* tokens.css is auto-injected by the SDK */
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--flyto-space-3) var(--flyto-space-4);
+      border-bottom: 1px solid var(--flyto-border);
+      background: var(--flyto-bg-card-solid);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: var(--flyto-text-sm);
+      font-weight: var(--flyto-font-semibold);
+      color: var(--flyto-text-primary);
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-2);
+    }
+
+    .header-title svg {
+      width: 16px;
+      height: 16px;
+      color: var(--flyto-success);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: var(--flyto-space-2);
+    }
+
+    /* ── Toolbar ────────────────────────────────────────── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+      padding: var(--flyto-space-2) var(--flyto-space-4);
+      border-bottom: 1px solid var(--flyto-border);
+      background: var(--flyto-bg-card-solid);
+      flex-shrink: 0;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-2);
+    }
+
+    .toolbar-label {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .ratio-btn {
+      padding: var(--flyto-space-1) var(--flyto-space-3);
+      font-size: var(--flyto-text-xs);
+      font-weight: var(--flyto-font-medium);
+      color: var(--flyto-text-secondary);
+      background: transparent;
+      border: 1px solid var(--flyto-border);
+      border-radius: var(--flyto-radius-md);
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .ratio-btn:hover {
+      border-color: var(--flyto-border-strong);
+      color: var(--flyto-text-primary);
+    }
+
+    .ratio-btn.active {
+      background: var(--flyto-primary);
+      border-color: var(--flyto-primary);
+      color: white;
+    }
+
+    .crop-info {
+      margin-left: auto;
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+      font-family: var(--flyto-font-mono);
+    }
+
+    /* ── Canvas Area ────────────────────────────────────── */
+    .canvas-area {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: #0a0e1a;
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+
+    #sourceCanvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    /* ── Crop overlay ───────────────────────────────────── */
+    .crop-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .crop-region {
+      position: absolute;
+      border: 2px solid var(--flyto-primary-light);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+      cursor: move;
+      pointer-events: all;
+    }
+
+    .crop-region::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(to right, rgba(255,255,255,0.15) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.15) 1px, transparent 1px);
+      background-size: 33.33% 33.33%;
+    }
+
+    /* Resize handles */
+    .crop-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: white;
+      border: 1.5px solid var(--flyto-primary);
+      border-radius: 2px;
+      pointer-events: all;
+    }
+
+    .crop-handle.tl { top: -5px; left: -5px; cursor: nw-resize; }
+    .crop-handle.tr { top: -5px; right: -5px; cursor: ne-resize; }
+    .crop-handle.bl { bottom: -5px; left: -5px; cursor: sw-resize; }
+    .crop-handle.br { bottom: -5px; right: -5px; cursor: se-resize; }
+    .crop-handle.tm { top: -5px; left: 50%; margin-left: -5px; cursor: n-resize; }
+    .crop-handle.bm { bottom: -5px; left: 50%; margin-left: -5px; cursor: s-resize; }
+    .crop-handle.ml { top: 50%; margin-top: -5px; left: -5px; cursor: w-resize; }
+    .crop-handle.mr { top: 50%; margin-top: -5px; right: -5px; cursor: e-resize; }
+
+    /* ── Loading / Error ────────────────────────────────── */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--flyto-space-4);
+      color: var(--flyto-text-secondary);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--flyto-border-strong);
+      border-top-color: var(--flyto-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      color: var(--flyto-error);
+      font-size: var(--flyto-text-sm);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      Crop Image
+    </div>
+    <div class="header-actions">
+      <button id="btnCancel" class="flyto-btn flyto-btn-ghost">Cancel</button>
+      <button id="btnApply" class="flyto-btn flyto-btn-primary">Apply Crop</button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <span class="toolbar-label">Ratio</span>
+      <button class="ratio-btn active" data-ratio="free">Free</button>
+      <button class="ratio-btn" data-ratio="1:1">1:1</button>
+      <button class="ratio-btn" data-ratio="16:9">16:9</button>
+      <button class="ratio-btn" data-ratio="4:3">4:3</button>
+      <button class="ratio-btn" data-ratio="9:16">9:16</button>
+    </div>
+    <span id="cropInfo" class="crop-info"></span>
+  </div>
+
+  <!-- Canvas -->
+  <div class="canvas-area" id="canvasArea">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <span>Loading image...</span>
+    </div>
+
+    <div class="canvas-wrapper" id="canvasWrapper" style="display:none;">
+      <canvas id="sourceCanvas"></canvas>
+      <div class="crop-overlay" id="cropOverlay">
+        <div class="crop-region" id="cropRegion">
+          <div class="crop-handle tl" data-handle="tl"></div>
+          <div class="crop-handle tr" data-handle="tr"></div>
+          <div class="crop-handle bl" data-handle="bl"></div>
+          <div class="crop-handle br" data-handle="br"></div>
+          <div class="crop-handle tm" data-handle="tm"></div>
+          <div class="crop-handle bm" data-handle="bm"></div>
+          <div class="crop-handle ml" data-handle="ml"></div>
+          <div class="crop-handle mr" data-handle="mr"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Wait for flyto bridge (auto-injected by SDK)
+    (function() {
+      'use strict';
+
+      const canvas = document.getElementById('sourceCanvas');
+      const ctx = canvas.getContext('2d');
+      const canvasWrapper = document.getElementById('canvasWrapper');
+      const canvasArea = document.getElementById('canvasArea');
+      const cropRegion = document.getElementById('cropRegion');
+      const cropInfo = document.getElementById('cropInfo');
+      const loading = document.getElementById('loading');
+
+      let img = null;
+      let displayScale = 1; // ratio of displayed size to natural size
+      let naturalW = 0;
+      let naturalH = 0;
+
+      // Crop rect in displayed pixels (relative to canvas)
+      let crop = { x: 0, y: 0, w: 0, h: 0 };
+
+      // Aspect ratio constraint
+      let ratioConstraint = null; // null = free, otherwise w/h ratio
+
+      // Drag state
+      let dragging = null; // { type: 'move' | 'resize', handle?, startX, startY, startCrop }
+
+      // Props from the host
+      let imageUrl = '';
+      let outputFormat = 'image/png';
+      let quality = 0.92;
+
+      // ── Initialize ────────────────────────────────────
+      function init() {
+        const props = window.flyto ? window.flyto.props : {};
+        imageUrl = props.imageUrl || '';
+        outputFormat = props.outputFormat || 'image/png';
+        quality = props.quality || 0.92;
+
+        const ratio = props.aspectRatio || 'free';
+        setRatio(ratio);
+
+        // Highlight active ratio button
+        document.querySelectorAll('.ratio-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.ratio === ratio);
+        });
+
+        if (imageUrl) {
+          loadImage(imageUrl);
+        } else {
+          loading.innerHTML = '<span class="error-msg">No image URL provided</span>';
+        }
+      }
+
+      function setRatio(ratio) {
+        if (ratio === 'free') {
+          ratioConstraint = null;
+        } else {
+          const [w, h] = ratio.split(':').map(Number);
+          ratioConstraint = w / h;
+        }
+      }
+
+      // ── Load image ────────────────────────────────────
+      function loadImage(url) {
+        img = new Image();
+        img.crossOrigin = 'anonymous';
+
+        img.onload = function() {
+          naturalW = img.naturalWidth;
+          naturalH = img.naturalHeight;
+
+          // Fit image to canvas area
+          const area = canvasArea.getBoundingClientRect();
+          const maxW = area.width - 40;
+          const maxH = area.height - 40;
+          displayScale = Math.min(maxW / naturalW, maxH / naturalH, 1);
+
+          const dispW = Math.round(naturalW * displayScale);
+          const dispH = Math.round(naturalH * displayScale);
+
+          canvas.width = dispW;
+          canvas.height = dispH;
+          ctx.drawImage(img, 0, 0, dispW, dispH);
+
+          // Initialize crop region (80% of image, centered)
+          const margin = 0.1;
+          crop = {
+            x: Math.round(dispW * margin),
+            y: Math.round(dispH * margin),
+            w: Math.round(dispW * (1 - 2 * margin)),
+            h: Math.round(dispH * (1 - 2 * margin)),
+          };
+
+          if (ratioConstraint) {
+            applyCropRatio();
+          }
+
+          loading.style.display = 'none';
+          canvasWrapper.style.display = 'block';
+          updateCropUI();
+        };
+
+        img.onerror = function() {
+          loading.innerHTML = '<span class="error-msg">Failed to load image</span>';
+        };
+
+        img.src = url;
+      }
+
+      // ── Crop UI ───────────────────────────────────────
+      function updateCropUI() {
+        cropRegion.style.left = crop.x + 'px';
+        cropRegion.style.top = crop.y + 'px';
+        cropRegion.style.width = crop.w + 'px';
+        cropRegion.style.height = crop.h + 'px';
+
+        // Show natural pixel dimensions
+        const natX = Math.round(crop.x / displayScale);
+        const natY = Math.round(crop.y / displayScale);
+        const natW = Math.round(crop.w / displayScale);
+        const natH = Math.round(crop.h / displayScale);
+        cropInfo.textContent = `${natW} × ${natH}  (${natX}, ${natY})`;
+      }
+
+      function clampCrop() {
+        const cw = canvas.width;
+        const ch = canvas.height;
+        crop.w = Math.max(20, Math.min(crop.w, cw));
+        crop.h = Math.max(20, Math.min(crop.h, ch));
+        crop.x = Math.max(0, Math.min(crop.x, cw - crop.w));
+        crop.y = Math.max(0, Math.min(crop.y, ch - crop.h));
+      }
+
+      function applyCropRatio() {
+        if (!ratioConstraint) return;
+        const currentRatio = crop.w / crop.h;
+        if (currentRatio > ratioConstraint) {
+          crop.w = Math.round(crop.h * ratioConstraint);
+        } else {
+          crop.h = Math.round(crop.w / ratioConstraint);
+        }
+        clampCrop();
+      }
+
+      // ── Mouse interaction ─────────────────────────────
+      cropRegion.addEventListener('mousedown', function(e) {
+        if (e.target.dataset.handle) return; // handled by handle listener
+        e.preventDefault();
+        dragging = {
+          type: 'move',
+          startX: e.clientX,
+          startY: e.clientY,
+          startCrop: { ...crop },
+        };
+      });
+
+      document.querySelectorAll('.crop-handle').forEach(handle => {
+        handle.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          dragging = {
+            type: 'resize',
+            handle: handle.dataset.handle,
+            startX: e.clientX,
+            startY: e.clientY,
+            startCrop: { ...crop },
+          };
+        });
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        const dx = e.clientX - dragging.startX;
+        const dy = e.clientY - dragging.startY;
+        const sc = dragging.startCrop;
+
+        if (dragging.type === 'move') {
+          crop.x = sc.x + dx;
+          crop.y = sc.y + dy;
+          clampCrop();
+        } else if (dragging.type === 'resize') {
+          const h = dragging.handle;
+
+          if (h.includes('r')) crop.w = Math.max(20, sc.w + dx);
+          if (h.includes('l')) { crop.x = sc.x + dx; crop.w = Math.max(20, sc.w - dx); }
+          if (h.includes('b')) crop.h = Math.max(20, sc.h + dy);
+          if (h.includes('t')) { crop.y = sc.y + dy; crop.h = Math.max(20, sc.h - dy); }
+
+          // Middle handles
+          if (h === 'tm') { crop.y = sc.y + dy; crop.h = Math.max(20, sc.h - dy); }
+          if (h === 'bm') { crop.h = Math.max(20, sc.h + dy); }
+          if (h === 'ml') { crop.x = sc.x + dx; crop.w = Math.max(20, sc.w - dx); }
+          if (h === 'mr') { crop.w = Math.max(20, sc.w + dx); }
+
+          if (ratioConstraint) applyCropRatio();
+          clampCrop();
+        }
+
+        updateCropUI();
+      });
+
+      document.addEventListener('mouseup', function() {
+        dragging = null;
+      });
+
+      // ── Ratio buttons ────────────────────────────────
+      document.querySelectorAll('.ratio-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          setRatio(btn.dataset.ratio);
+          if (ratioConstraint) applyCropRatio();
+          updateCropUI();
+        });
+      });
+
+      // ── Apply / Cancel ────────────────────────────────
+      document.getElementById('btnApply').addEventListener('click', function() {
+        if (!img) return;
+
+        // Compute crop in natural pixels
+        const natRect = {
+          x: Math.round(crop.x / displayScale),
+          y: Math.round(crop.y / displayScale),
+          width: Math.round(crop.w / displayScale),
+          height: Math.round(crop.h / displayScale),
+        };
+
+        // Draw cropped region to a temporary canvas
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = natRect.width;
+        tmpCanvas.height = natRect.height;
+        const tmpCtx = tmpCanvas.getContext('2d');
+        tmpCtx.drawImage(
+          img,
+          natRect.x, natRect.y, natRect.width, natRect.height,
+          0, 0, natRect.width, natRect.height
+        );
+
+        const dataUrl = tmpCanvas.toDataURL(outputFormat, quality);
+
+        window.flyto.submit({
+          croppedDataUrl: dataUrl,
+          cropRect: natRect,
+          originalSize: { width: naturalW, height: naturalH },
+        });
+      });
+
+      document.getElementById('btnCancel').addEventListener('click', function() {
+        window.flyto.cancel();
+      });
+
+      // Keyboard shortcuts
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') window.flyto.cancel();
+        if (e.key === 'Enter') document.getElementById('btnApply').click();
+      });
+
+      // ── Start ─────────────────────────────────────────
+      // Bridge might load async, wait for it
+      if (window.flyto) {
+        init();
+      } else {
+        // Bridge auto-injects before our script, but just in case
+        const check = setInterval(() => {
+          if (window.flyto) {
+            clearInterval(check);
+            init();
+          }
+        }, 50);
+        // Timeout after 5s
+        setTimeout(() => clearInterval(check), 5000);
+      }
+    })();
+  </script>
+</body>
+</html>

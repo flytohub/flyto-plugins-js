@@ -1,0 +1,114 @@
+id: flyto-community/form-builder
+name: Form Builder
+version: 0.1.0
+description: Interactive form collection — collect structured user input during workflow execution
+
+runtime:
+  language: node
+  entry_point: dist/index.js
+  min_flyto_version: "2.25.0"
+
+steps:
+  - id: collect_form
+    label: Collect Form
+    description: Display a dynamic form and collect user input
+    category: human-in-the-loop
+    icon: ClipboardList
+    color: "#8b5cf6"
+    can_receive_from: ["*"]
+    can_connect_to: ["*"]
+    params_schema:
+      title:
+        type: string
+        label: Form Title
+        required: true
+        placeholder: "Enter your details"
+      description:
+        type: string
+        label: Description
+        description: Optional description shown above the form
+      mode:
+        type: string
+        label: Mode
+        default: "single"
+        options:
+          - { value: "single", label: "Single Page" }
+          - { value: "wizard", label: "Multi-Step Wizard" }
+      submit_label:
+        type: string
+        label: Submit Button Text
+        default: "Submit"
+      fields:
+        type: array
+        label: Form Fields
+        description: JSON array of field definitions
+        required: true
+    output_schema:
+      submitted:
+        type: boolean
+        description: Whether the user submitted (true) or cancelled (false)
+      values:
+        type: object
+        description: "Key-value map of field_id → submitted value"
+      metadata:
+        type: object
+        description: "Submission metadata: timestamp, duration_ms"
+    ui:
+      type: dialog
+      page: ui
+      width: 720
+      height: 700
+      timeout_ms: 1800000
+
+  - id: approval_form
+    label: Approval Form
+    description: Display context + approval form with approve/reject actions
+    category: human-in-the-loop
+    icon: ShieldCheck
+    color: "#f59e0b"
+    can_receive_from: ["*"]
+    can_connect_to: ["*"]
+    params_schema:
+      title:
+        type: string
+        label: Title
+        required: true
+        placeholder: "Approve deployment?"
+      context:
+        type: object
+        label: Context Data
+        description: Data to display for review (key-value pairs shown as read-only)
+      fields:
+        type: array
+        label: Additional Fields
+        description: Optional fields to collect alongside the decision
+      require_comment:
+        type: boolean
+        label: Require Comment
+        default: false
+      approve_label:
+        type: string
+        label: Approve Button Text
+        default: "Approve"
+      reject_label:
+        type: string
+        label: Reject Button Text
+        default: "Reject"
+    output_schema:
+      decision:
+        type: string
+        description: "'approved' or 'rejected'"
+      comment:
+        type: string
+        description: Reviewer comment
+      values:
+        type: object
+        description: Additional field values
+    ui:
+      type: dialog
+      page: ui
+      width: 640
+      height: 600
+      timeout_ms: 1800000
+
+required_secrets: []

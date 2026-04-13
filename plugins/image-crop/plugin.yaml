@@ -1,0 +1,65 @@
+id: flyto-community/image-crop
+name: Image Crop
+version: 0.1.0
+description: Interactive image cropping and resizing tool
+
+runtime:
+  language: node
+  entry_point: dist/index.js
+  min_flyto_version: "2.25.0"
+
+steps:
+  - id: crop_image
+    label: Crop Image
+    description: Open an interactive image cropping tool
+    category: media
+    icon: Crop
+    color: "#10B981"
+    can_receive_from: ["*"]
+    can_connect_to: ["*"]
+    params_schema:
+      image_url:
+        type: string
+        label: Image URL
+        description: URL or data URL of the image to crop
+        required: true
+      aspect_ratio:
+        type: string
+        label: Aspect Ratio
+        description: Constrain crop to a specific ratio
+        default: "free"
+        options:
+          - { value: "free", label: "Free" }
+          - { value: "1:1", label: "Square (1:1)" }
+          - { value: "16:9", label: "Widescreen (16:9)" }
+          - { value: "4:3", label: "Standard (4:3)" }
+          - { value: "9:16", label: "Portrait (9:16)" }
+      output_format:
+        type: string
+        label: Output Format
+        default: "image/png"
+        options:
+          - { value: "image/png", label: "PNG" }
+          - { value: "image/jpeg", label: "JPEG" }
+          - { value: "image/webp", label: "WebP" }
+      quality:
+        type: number
+        label: Quality
+        description: Output quality (0.1 - 1.0, for JPEG/WebP)
+        default: 0.92
+    output_schema:
+      cropped_data_url:
+        type: string
+        description: Base64 data URL of the cropped image
+      crop_rect:
+        type: object
+        description: "Crop coordinates: { x, y, width, height }"
+      original_size:
+        type: object
+        description: "Original image size: { width, height }"
+    ui:
+      type: dialog
+      page: ui
+      width: 900
+      height: 650
+      timeout_ms: 600000

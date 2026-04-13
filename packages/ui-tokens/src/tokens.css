@@ -1,0 +1,263 @@
+/* Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE. */
+
+/**
+ * Flyto Plugin UI Design Tokens
+ *
+ * Import this file in your plugin UI to match the flyto-cloud look & feel.
+ * These variables are also injected at runtime by the SDK bridge,
+ * so the host app can override them for theme sync.
+ *
+ * Usage:
+ *   @import '@flyto/plugin-ui-tokens';
+ *
+ *   .my-button { background: var(--flyto-primary); }
+ */
+
+:root {
+  /* ── Brand ─────────────────────────────────────────────── */
+  --flyto-primary: #8b5cf6;
+  --flyto-primary-light: #a78bfa;
+  --flyto-primary-dark: #7c3aed;
+  --flyto-accent: #06b6d4;
+  --flyto-accent-light: #22d3ee;
+  --flyto-accent-dark: #0891b2;
+
+  /* ── Primary scale (indigo) ────────────────────────────── */
+  --flyto-primary-50: #f0f4ff;
+  --flyto-primary-100: #e0eaff;
+  --flyto-primary-200: #c7d7fe;
+  --flyto-primary-300: #a5b8fc;
+  --flyto-primary-400: #818cf8;
+  --flyto-primary-500: #6366f1;
+  --flyto-primary-600: #4f46e5;
+  --flyto-primary-700: #4338ca;
+  --flyto-primary-800: #3730a3;
+  --flyto-primary-900: #312e81;
+
+  /* ── Functional ────────────────────────────────────────── */
+  --flyto-success: #10b981;
+  --flyto-success-dark: #059669;
+  --flyto-warning: #f59e0b;
+  --flyto-warning-dark: #d97706;
+  --flyto-error: #ef4444;
+  --flyto-error-dark: #dc2626;
+  --flyto-info: #3b82f6;
+  --flyto-info-dark: #2563eb;
+
+  /* ── Surfaces (dark-first) ─────────────────────────────── */
+  --flyto-bg-page: #0f172a;
+  --flyto-bg-card: rgba(30, 41, 59, 0.8);
+  --flyto-bg-card-solid: #1e293b;
+  --flyto-bg-input: #1e293b;
+  --flyto-bg-hover: rgba(148, 163, 184, 0.08);
+  --flyto-bg-active: rgba(148, 163, 184, 0.12);
+  --flyto-bg-overlay: rgba(0, 0, 0, 0.6);
+
+  /* ── Borders ───────────────────────────────────────────── */
+  --flyto-border: rgba(148, 163, 184, 0.1);
+  --flyto-border-strong: rgba(148, 163, 184, 0.2);
+  --flyto-border-focus: var(--flyto-primary);
+
+  /* ── Text ──────────────────────────────────────────────── */
+  --flyto-text-primary: #f1f5f9;
+  --flyto-text-secondary: #94a3b8;
+  --flyto-text-tertiary: #64748b;
+  --flyto-text-disabled: #475569;
+  --flyto-text-inverse: #0f172a;
+  --flyto-text-link: var(--flyto-primary-light);
+
+  /* ── Typography ────────────────────────────────────────── */
+  --flyto-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --flyto-font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono',
+    monospace;
+
+  --flyto-text-xs: 0.75rem;     /* 12px */
+  --flyto-text-sm: 0.875rem;    /* 14px */
+  --flyto-text-base: 1rem;      /* 16px */
+  --flyto-text-lg: 1.125rem;    /* 18px */
+  --flyto-text-xl: 1.25rem;     /* 20px */
+  --flyto-text-2xl: 1.5rem;     /* 24px */
+
+  --flyto-font-normal: 400;
+  --flyto-font-medium: 500;
+  --flyto-font-semibold: 600;
+  --flyto-font-bold: 700;
+
+  --flyto-leading-tight: 1.25;
+  --flyto-leading-normal: 1.5;
+  --flyto-leading-relaxed: 1.75;
+
+  /* ── Spacing ───────────────────────────────────────────── */
+  --flyto-space-1: 0.25rem;     /* 4px  */
+  --flyto-space-2: 0.5rem;      /* 8px  */
+  --flyto-space-3: 0.75rem;     /* 12px */
+  --flyto-space-4: 1rem;        /* 16px */
+  --flyto-space-5: 1.25rem;     /* 20px */
+  --flyto-space-6: 1.5rem;      /* 24px */
+  --flyto-space-8: 2rem;        /* 32px */
+  --flyto-space-10: 2.5rem;     /* 40px */
+  --flyto-space-12: 3rem;       /* 48px */
+
+  /* ── Radius ────────────────────────────────────────────── */
+  --flyto-radius-sm: 0.25rem;   /* 4px  */
+  --flyto-radius-md: 0.375rem;  /* 6px  */
+  --flyto-radius-lg: 0.5rem;    /* 8px  */
+  --flyto-radius-xl: 0.75rem;   /* 12px */
+  --flyto-radius-2xl: 1rem;     /* 16px */
+  --flyto-radius-full: 9999px;
+
+  /* ── Shadows ───────────────────────────────────────────── */
+  --flyto-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --flyto-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --flyto-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --flyto-shadow-glow: 0 0 20px rgba(139, 92, 246, 0.4);
+
+  /* ── Transitions ───────────────────────────────────────── */
+  --flyto-transition-fast: all 0.15s ease;
+  --flyto-transition-default: all 0.2s ease;
+  --flyto-transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── Z-index ───────────────────────────────────────────── */
+  --flyto-z-dropdown: 100;
+  --flyto-z-modal: 200;
+  --flyto-z-toast: 300;
+}
+
+/* ── Base reset for plugin UI ────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--flyto-font-family);
+  font-size: var(--flyto-text-sm);
+  line-height: var(--flyto-leading-normal);
+  color: var(--flyto-text-primary);
+  background: var(--flyto-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Utility classes ─────────────────────────────────────── */
+
+.flyto-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--flyto-space-2);
+  padding: var(--flyto-space-2) var(--flyto-space-4);
+  font-size: var(--flyto-text-sm);
+  font-weight: var(--flyto-font-medium);
+  line-height: var(--flyto-leading-tight);
+  border: none;
+  border-radius: var(--flyto-radius-lg);
+  cursor: pointer;
+  transition: var(--flyto-transition-default);
+  outline: none;
+}
+
+.flyto-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--flyto-bg-page), 0 0 0 4px var(--flyto-primary);
+}
+
+.flyto-btn-primary {
+  background: linear-gradient(135deg, var(--flyto-primary-600), var(--flyto-primary));
+  color: white;
+  box-shadow: var(--flyto-shadow-sm);
+}
+
+.flyto-btn-primary:hover {
+  background: linear-gradient(135deg, var(--flyto-primary), var(--flyto-primary-light));
+  box-shadow: var(--flyto-shadow-md);
+}
+
+.flyto-btn-secondary {
+  background: var(--flyto-bg-card-solid);
+  color: var(--flyto-text-primary);
+  border: 1px solid var(--flyto-border-strong);
+}
+
+.flyto-btn-secondary:hover {
+  background: var(--flyto-bg-hover);
+  border-color: var(--flyto-border-focus);
+}
+
+.flyto-btn-ghost {
+  background: transparent;
+  color: var(--flyto-text-secondary);
+}
+
+.flyto-btn-ghost:hover {
+  background: var(--flyto-bg-hover);
+  color: var(--flyto-text-primary);
+}
+
+.flyto-input {
+  width: 100%;
+  padding: var(--flyto-space-2) var(--flyto-space-4);
+  font-size: var(--flyto-text-sm);
+  font-family: var(--flyto-font-family);
+  color: var(--flyto-text-primary);
+  background: var(--flyto-bg-input);
+  border: 1px solid var(--flyto-border);
+  border-radius: var(--flyto-radius-lg);
+  outline: none;
+  transition: var(--flyto-transition-fast);
+}
+
+.flyto-input:focus {
+  border-color: var(--flyto-primary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+}
+
+.flyto-input::placeholder {
+  color: var(--flyto-text-tertiary);
+}
+
+.flyto-card {
+  background: var(--flyto-bg-card);
+  border: 1px solid var(--flyto-border);
+  border-radius: var(--flyto-radius-xl);
+  padding: var(--flyto-space-6);
+}
+
+.flyto-label {
+  display: block;
+  font-size: var(--flyto-text-xs);
+  font-weight: var(--flyto-font-medium);
+  color: var(--flyto-text-secondary);
+  margin-bottom: var(--flyto-space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.flyto-divider {
+  border: none;
+  border-top: 1px solid var(--flyto-border);
+  margin: var(--flyto-space-4) 0;
+}
+
+/* ── Scrollbar ───────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--flyto-text-tertiary);
+  border-radius: var(--flyto-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--flyto-text-secondary);
+}

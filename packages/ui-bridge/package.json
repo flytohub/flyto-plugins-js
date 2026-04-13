@@ -1,0 +1,23 @@
+{
+  "name": "@flyto/plugin-ui-bridge",
+  "version": "0.1.0",
+  "description": "Communication bridge between Flyto2 plugin UIs and the host app",
+  "type": "module",
+  "main": "src/bridge.js",
+  "types": "src/bridge.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/bridge.d.ts",
+      "default": "./src/bridge.js"
+    },
+    "./auto": "./src/auto.js"
+  },
+  "scripts": {
+    "build": "echo 'No build needed — plain JS'"
+  },
+  "files": [
+    "src"
+  ],
+  "keywords": ["flyto", "plugin", "bridge", "iframe"],
+  "license": "Apache-2.0"
+}

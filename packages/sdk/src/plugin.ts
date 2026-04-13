@@ -8,22 +8,31 @@
  */
 
 import * as readline from "readline";
+import * as path from "path";
 import type {
   PluginConfig,
   StepHandler,
   StepContext,
   StepResult,
+  StepUIConfig,
+  UIResult,
+  UIStepContext,
+  UIStepHandler,
   JsonRpcRequest,
   JsonRpcResponse,
   HandshakeParams,
   InvokeParams,
 } from "./types.js";
+import { UIServer } from "./ui-server.js";
 
 const PROTOCOL_VERSION = "0.1.0";
 
 export class FlytoPlugin {
   private config: PluginConfig;
   private steps = new Map<string, StepHandler>();
+  private uiSteps = new Map<string, UIStepHandler>();
+  private uiConfigs = new Map<string, StepUIConfig>();
+  private uiServer: UIServer | null = null;
   private running = false;
 
   constructor(config: PluginConfig) {
@@ -31,13 +40,30 @@ export class FlytoPlugin {
   }
 
   /**
-   * Register a step handler.
+   * Register a headless step handler.
    *
    * @param stepId - Step identifier (e.g., "send_message")
    * @param handler - Async function that processes input and returns result
    */
   step(stepId: string, handler: StepHandler): this {
     this.steps.set(stepId, handler);
+    return this;
+  }
+
+  /**
+   * Register a UI-enabled step handler.
+   *
+   * When invoked, the handler receives a context with `waitForUI()` that
+   * starts a local HTTP server, serves the UI page, and waits for the
+   * user to submit or cancel.
+   *
+   * @param stepId - Step identifier (e.g., "crop_image")
+   * @param uiConfig - UI configuration (page path, type, dimensions)
+   * @param handler - Async function with UI context
+   */
+  uiStep(stepId: string, uiConfig: StepUIConfig, handler: UIStepHandler): this {
+    this.uiSteps.set(stepId, handler);
+    this.uiConfigs.set(stepId, uiConfig);
     return this;
   }
 
@@ -77,8 +103,9 @@ export class FlytoPlugin {
     });
 
     // Handle SIGTERM gracefully
-    process.on("SIGTERM", () => {
+    process.on("SIGTERM", async () => {
       this.running = false;
+      await this.stopUIServer();
       process.exit(0);
     });
   }
@@ -101,6 +128,7 @@ export class FlytoPlugin {
 
       case "shutdown":
         this.running = false;
+        await this.stopUIServer();
         const response = this.success(id, { status: "shutdown" });
         // Exit after sending response
         setTimeout(() => process.exit(0), 100);
@@ -112,18 +140,37 @@ export class FlytoPlugin {
   }
 
   private handleHandshake(params: HandshakeParams, id: number | string): JsonRpcResponse {
+    // Merge headless + UI step IDs
+    const allSteps = [
+      ...Array.from(this.steps.keys()),
+      ...Array.from(this.uiSteps.keys()),
+    ];
+
+    // Report UI metadata for steps that have it
+    const uiMeta: Record<string, { type: string; width?: number; height?: number }> = {};
+    for (const [stepId, config] of this.uiConfigs) {
+      uiMeta[stepId] = {
+        type: config.type || "page",
+        width: config.width,
+        height: config.height,
+      };
+    }
+
     return this.success(id, {
       pluginVersion: this.config.version,
       protocolVersion: PROTOCOL_VERSION,
-      steps: Array.from(this.steps.keys()),
+      steps: allSteps,
+      ui: Object.keys(uiMeta).length > 0 ? uiMeta : undefined,
     });
   }
 
   private async handleInvoke(params: InvokeParams, id: number | string): Promise<JsonRpcResponse> {
     const { step, input, context: rawContext } = params;
 
-    const handler = this.steps.get(step);
-    if (!handler) {
+    const headlessHandler = this.steps.get(step);
+    const uiHandler = this.uiSteps.get(step);
+
+    if (!headlessHandler && !uiHandler) {
       return this.success(id, {
         ok: false,
         error: {
@@ -136,7 +183,16 @@ export class FlytoPlugin {
     const context = this.buildContext(rawContext || {});
 
     try {
-      const result = await handler(input || {}, context);
+      let result: StepResult;
+
+      if (uiHandler) {
+        // UI step — build context with waitForUI
+        const uiContext = await this.buildUIContext(context, step);
+        result = await uiHandler(input || {}, uiContext);
+      } else {
+        result = await headlessHandler!(input || {}, context);
+      }
+
       return this.success(id, result);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -159,6 +215,76 @@ export class FlytoPlugin {
       secrets: raw.secrets as Record<string, string> | undefined,
       raw,
     };
+  }
+
+  private async buildUIContext(base: StepContext, stepId: string): Promise<UIStepContext> {
+    const server = await this.ensureUIServer(stepId);
+
+    const waitForUI = async (config: StepUIConfig): Promise<UIResult> => {
+      const requestId = crypto.randomUUID();
+      const uiUrl = server.buildUIUrl(
+        config.page.endsWith(".html") ? config.page : "index.html",
+        requestId,
+        config.props || {}
+      );
+
+      // Tell flyto-core to open the UI
+      this.send({
+        jsonrpc: "2.0",
+        method: "ui.open",
+        params: {
+          url: uiUrl,
+          type: config.type || "page",
+          width: config.width,
+          height: config.height,
+          requestId,
+        },
+      } as unknown as JsonRpcResponse);
+
+      // Wait for user to submit/cancel
+      const result = await server.waitForUI({
+        requestId,
+        timeoutMs: config.timeoutMs,
+      });
+
+      // Tell flyto-core the UI is done
+      this.send({
+        jsonrpc: "2.0",
+        method: "ui.close",
+        params: { requestId },
+      } as unknown as JsonRpcResponse);
+
+      return result;
+    };
+
+    return { ...base, waitForUI };
+  }
+
+  private async ensureUIServer(stepId: string): Promise<UIServer> {
+    if (this.uiServer) return this.uiServer;
+
+    const config = this.uiConfigs.get(stepId);
+    if (!config) {
+      throw new Error(`No UI config for step '${stepId}'`);
+    }
+
+    // Resolve UI root relative to the plugin's working directory
+    const uiRoot = path.resolve(process.cwd(), config.page);
+    this.uiServer = new UIServer({ uiRoot });
+    await this.uiServer.start();
+
+    process.stderr.write(
+      `[flyto-plugin] UI server started on port ${this.uiServer.getPort()} serving ${uiRoot}\n`
+    );
+
+    return this.uiServer;
+  }
+
+  private async stopUIServer(): Promise<void> {
+    if (this.uiServer) {
+      await this.uiServer.stop();
+      this.uiServer = null;
+    }
   }
 
   private send(response: JsonRpcResponse): void {

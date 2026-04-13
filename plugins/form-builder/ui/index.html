@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flyto — Form</title>
+  <style>
+    /* tokens.css is auto-injected by the SDK */
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--flyto-space-3) var(--flyto-space-5);
+      border-bottom: 1px solid var(--flyto-border);
+      background: var(--flyto-bg-card-solid);
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .header-title {
+      font-size: var(--flyto-text-base);
+      font-weight: var(--flyto-font-semibold);
+      color: var(--flyto-text-primary);
+    }
+
+    .header-desc {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: var(--flyto-space-2);
+      flex-shrink: 0;
+    }
+
+    /* ── Wizard Steps ───────────────────────────────────── */
+    .wizard-steps {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-2);
+      padding: var(--flyto-space-3) var(--flyto-space-5);
+      border-bottom: 1px solid var(--flyto-border);
+      background: var(--flyto-bg-card-solid);
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+
+    .wizard-step {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-2);
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+      white-space: nowrap;
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .wizard-step:hover { color: var(--flyto-text-secondary); }
+
+    .wizard-step.active { color: var(--flyto-primary-light); }
+    .wizard-step.completed { color: var(--flyto-success); }
+
+    .wizard-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: var(--flyto-font-semibold);
+      border: 2px solid var(--flyto-border-strong);
+      color: var(--flyto-text-tertiary);
+      flex-shrink: 0;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .wizard-step.active .wizard-dot {
+      border-color: var(--flyto-primary);
+      background: var(--flyto-primary);
+      color: white;
+    }
+
+    .wizard-step.completed .wizard-dot {
+      border-color: var(--flyto-success);
+      background: var(--flyto-success);
+      color: white;
+    }
+
+    .wizard-connector {
+      width: 24px;
+      height: 2px;
+      background: var(--flyto-border-strong);
+      flex-shrink: 0;
+    }
+
+    .wizard-connector.completed { background: var(--flyto-success); }
+
+    /* ── Form Body ──────────────────────────────────────── */
+    .form-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--flyto-space-5);
+    }
+
+    .form-section {
+      margin-bottom: var(--flyto-space-6);
+    }
+
+    .section-title {
+      font-size: var(--flyto-text-sm);
+      font-weight: var(--flyto-font-semibold);
+      color: var(--flyto-text-primary);
+      margin-bottom: var(--flyto-space-1);
+    }
+
+    .section-desc {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+      margin-bottom: var(--flyto-space-4);
+    }
+
+    /* ── Field ──────────────────────────────────────────── */
+    .field {
+      margin-bottom: var(--flyto-space-4);
+    }
+
+    .field.hidden { display: none; }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-1);
+      font-size: var(--flyto-text-sm);
+      font-weight: var(--flyto-font-medium);
+      color: var(--flyto-text-primary);
+      margin-bottom: var(--flyto-space-1);
+    }
+
+    .field-required {
+      color: var(--flyto-error);
+      font-size: var(--flyto-text-xs);
+    }
+
+    .field-hint {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+      margin-bottom: var(--flyto-space-2);
+    }
+
+    .field-error {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-error);
+      margin-top: var(--flyto-space-1);
+    }
+
+    .field.has-error .flyto-input,
+    .field.has-error .select-trigger,
+    .field.has-error textarea {
+      border-color: var(--flyto-error);
+    }
+
+    /* ── Textarea ───────────────────────────────────────── */
+    textarea.flyto-input {
+      min-height: 80px;
+      resize: vertical;
+      font-family: var(--flyto-font-family);
+      line-height: var(--flyto-leading-normal);
+    }
+
+    /* ── Select / Dropdown ──────────────────────────────── */
+    .select-wrapper { position: relative; }
+
+    .select-trigger {
+      width: 100%;
+      padding: var(--flyto-space-2) var(--flyto-space-4);
+      padding-right: var(--flyto-space-8);
+      font-size: var(--flyto-text-sm);
+      font-family: var(--flyto-font-family);
+      color: var(--flyto-text-primary);
+      background: var(--flyto-bg-input);
+      border: 1px solid var(--flyto-border);
+      border-radius: var(--flyto-radius-lg);
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+      text-align: left;
+      display: flex;
+      align-items: center;
+      min-height: 38px;
+    }
+
+    .select-trigger:hover { border-color: var(--flyto-border-strong); }
+    .select-trigger:focus { border-color: var(--flyto-primary); outline: none; box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+
+    .select-trigger .placeholder { color: var(--flyto-text-tertiary); }
+
+    .select-arrow {
+      position: absolute;
+      right: var(--flyto-space-3);
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--flyto-text-tertiary);
+      font-size: 10px;
+    }
+
+    .select-dropdown {
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: var(--flyto-bg-card-solid);
+      border: 1px solid var(--flyto-border-strong);
+      border-radius: var(--flyto-radius-lg);
+      box-shadow: var(--flyto-shadow-lg);
+      z-index: var(--flyto-z-dropdown);
+      max-height: 200px;
+      overflow-y: auto;
+      display: none;
+    }
+
+    .select-dropdown.open { display: block; }
+
+    .select-option {
+      padding: var(--flyto-space-2) var(--flyto-space-4);
+      font-size: var(--flyto-text-sm);
+      color: var(--flyto-text-primary);
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .select-option:hover { background: var(--flyto-bg-hover); }
+    .select-option.selected { background: rgba(139,92,246,0.15); color: var(--flyto-primary-light); }
+
+    /* ── Checkbox / Toggle ──────────────────────────────── */
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+      cursor: pointer;
+    }
+
+    .checkbox-box {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--flyto-border-strong);
+      border-radius: var(--flyto-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--flyto-transition-fast);
+      flex-shrink: 0;
+      font-size: 11px;
+      color: transparent;
+    }
+
+    .checkbox-row.checked .checkbox-box {
+      background: var(--flyto-primary);
+      border-color: var(--flyto-primary);
+      color: white;
+    }
+
+    .toggle-track {
+      width: 36px;
+      height: 20px;
+      border-radius: var(--flyto-radius-full);
+      background: var(--flyto-border-strong);
+      position: relative;
+      transition: var(--flyto-transition-fast);
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .toggle-track.on { background: var(--flyto-primary); }
+
+    .toggle-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .toggle-track.on .toggle-thumb { left: 18px; }
+
+    /* ── Radio ──────────────────────────────────────────── */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--flyto-space-2);
+    }
+
+    .radio-row {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+      cursor: pointer;
+      padding: var(--flyto-space-1) 0;
+    }
+
+    .radio-dot-outer {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--flyto-border-strong);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .radio-dot-inner {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: transparent;
+      transition: var(--flyto-transition-fast);
+    }
+
+    .radio-row.selected .radio-dot-outer { border-color: var(--flyto-primary); }
+    .radio-row.selected .radio-dot-inner { background: var(--flyto-primary); }
+
+    .radio-label {
+      font-size: var(--flyto-text-sm);
+      color: var(--flyto-text-primary);
+    }
+
+    /* ── Slider ─────────────────────────────────────────── */
+    .slider-wrapper {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+    }
+
+    input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: var(--flyto-border-strong);
+      border-radius: var(--flyto-radius-full);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--flyto-primary);
+      cursor: pointer;
+      box-shadow: var(--flyto-shadow-sm);
+    }
+
+    .slider-value {
+      font-size: var(--flyto-text-sm);
+      font-family: var(--flyto-font-mono);
+      color: var(--flyto-text-secondary);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ── Rating ─────────────────────────────────────────── */
+    .rating-row {
+      display: flex;
+      gap: var(--flyto-space-1);
+    }
+
+    .rating-star {
+      font-size: 24px;
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+      color: var(--flyto-border-strong);
+      line-height: 1;
+    }
+
+    .rating-star.active { color: var(--flyto-warning); }
+    .rating-star:hover { transform: scale(1.15); }
+
+    /* ── Date / Time ────────────────────────────────────── */
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"] {
+      color-scheme: dark;
+    }
+
+    /* ── File Upload ────────────────────────────────────── */
+    .file-drop {
+      border: 2px dashed var(--flyto-border-strong);
+      border-radius: var(--flyto-radius-lg);
+      padding: var(--flyto-space-6) var(--flyto-space-4);
+      text-align: center;
+      cursor: pointer;
+      transition: var(--flyto-transition-fast);
+      color: var(--flyto-text-tertiary);
+      font-size: var(--flyto-text-sm);
+    }
+
+    .file-drop:hover,
+    .file-drop.dragover {
+      border-color: var(--flyto-primary);
+      background: rgba(139,92,246,0.05);
+      color: var(--flyto-text-secondary);
+    }
+
+    .file-drop input[type="file"] { display: none; }
+
+    .file-preview {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+      padding: var(--flyto-space-2) var(--flyto-space-3);
+      background: var(--flyto-bg-card);
+      border: 1px solid var(--flyto-border);
+      border-radius: var(--flyto-radius-lg);
+      margin-top: var(--flyto-space-2);
+    }
+
+    .file-preview-name {
+      flex: 1;
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-preview-size {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+      flex-shrink: 0;
+    }
+
+    .file-remove {
+      background: none;
+      border: none;
+      color: var(--flyto-text-tertiary);
+      cursor: pointer;
+      font-size: var(--flyto-text-sm);
+      padding: 2px 6px;
+      border-radius: var(--flyto-radius-sm);
+    }
+
+    .file-remove:hover { color: var(--flyto-error); background: var(--flyto-bg-hover); }
+
+    /* ── Multi-select Tags ──────────────────────────────── */
+    .multi-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--flyto-space-1);
+      margin-bottom: var(--flyto-space-2);
+    }
+
+    .multi-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      font-size: var(--flyto-text-xs);
+      background: rgba(139,92,246,0.15);
+      color: var(--flyto-primary-light);
+      border-radius: var(--flyto-radius-full);
+    }
+
+    .multi-tag-remove {
+      cursor: pointer;
+      font-size: 10px;
+      opacity: 0.7;
+    }
+
+    .multi-tag-remove:hover { opacity: 1; }
+
+    /* ── Color Picker ───────────────────────────────────── */
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: var(--flyto-space-3);
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      width: 38px;
+      height: 38px;
+      border: 2px solid var(--flyto-border);
+      border-radius: var(--flyto-radius-lg);
+      cursor: pointer;
+      background: transparent;
+      padding: 2px;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: none; border-radius: var(--flyto-radius-md); }
+
+    .color-value {
+      font-size: var(--flyto-text-sm);
+      font-family: var(--flyto-font-mono);
+      color: var(--flyto-text-secondary);
+    }
+
+    /* ── Approval Context ───────────────────────────────── */
+    .context-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: var(--flyto-space-4);
+    }
+
+    .context-table td {
+      padding: var(--flyto-space-2) var(--flyto-space-3);
+      font-size: var(--flyto-text-sm);
+      border-bottom: 1px solid var(--flyto-border);
+    }
+
+    .context-table td:first-child {
+      color: var(--flyto-text-secondary);
+      font-weight: var(--flyto-font-medium);
+      width: 35%;
+      white-space: nowrap;
+    }
+
+    .context-table td:last-child {
+      color: var(--flyto-text-primary);
+      font-family: var(--flyto-font-mono);
+      font-size: var(--flyto-text-xs);
+      word-break: break-all;
+    }
+
+    /* ── Footer ─────────────────────────────────────────── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--flyto-space-3) var(--flyto-space-5);
+      border-top: 1px solid var(--flyto-border);
+      background: var(--flyto-bg-card-solid);
+      flex-shrink: 0;
+    }
+
+    .footer-left {
+      font-size: var(--flyto-text-xs);
+      color: var(--flyto-text-tertiary);
+    }
+
+    .footer-right {
+      display: flex;
+      gap: var(--flyto-space-2);
+    }
+
+    /* ── Btn sizes ──────────────────────────────────────── */
+    .flyto-btn-danger {
+      background: var(--flyto-error);
+      color: white;
+      border: none;
+    }
+    .flyto-btn-danger:hover { background: var(--flyto-error-dark); }
+
+    .flyto-btn-success {
+      background: var(--flyto-success);
+      color: white;
+      border: none;
+    }
+    .flyto-btn-success:hover { background: var(--flyto-success-dark); }
+  </style>
+</head>
+<body>
+
+  <div id="app"></div>
+
+  <script>
+  (function() {
+    'use strict';
+
+    // ── State ────────────────────────────────────────────
+    let props = {};
+    let values = {};
+    let errors = {};
+    let currentStep = 0;
+    let startTime = Date.now();
+
+    // ── Init ─────────────────────────────────────────────
+    function init() {
+      props = window.flyto ? window.flyto.props : {};
+
+      // Set defaults
+      const fields = getAllFields();
+      fields.forEach(f => {
+        if (f.default !== undefined && values[f.id] === undefined) {
+          values[f.id] = f.default;
+        }
+        if (f.type === 'checkbox' && values[f.id] === undefined) values[f.id] = false;
+        if (f.type === 'toggle' && values[f.id] === undefined) values[f.id] = false;
+        if (f.type === 'multiselect' && values[f.id] === undefined) values[f.id] = [];
+        if (f.type === 'rating' && values[f.id] === undefined) values[f.id] = 0;
+        if (f.type === 'slider' && values[f.id] === undefined) values[f.id] = f.min || 0;
+      });
+
+      render();
+    }
+
+    function getAllFields() {
+      return (props.fields || []);
+    }
+
+    function getWizardSteps() {
+      if (props.mode !== 'wizard') return null;
+      const fields = getAllFields();
+      const steps = [];
+      let current = { label: 'Step 1', fields: [] };
+      fields.forEach(f => {
+        if (f.type === 'step_break') {
+          steps.push(current);
+          current = { label: f.label || ('Step ' + (steps.length + 2)), fields: [] };
+        } else {
+          current.fields.push(f);
+        }
+      });
+      steps.push(current);
+      return steps;
+    }
+
+    function getVisibleFields(fieldList) {
+      return fieldList.filter(f => {
+        if (!f.condition) return true;
+        return evaluateCondition(f.condition);
+      });
+    }
+
+    function evaluateCondition(cond) {
+      if (!cond) return true;
+      const { field, op, value } = cond;
+      const v = values[field];
+      switch (op || 'eq') {
+        case 'eq': return v === value;
+        case 'neq': return v !== value;
+        case 'gt': return Number(v) > Number(value);
+        case 'lt': return Number(v) < Number(value);
+        case 'contains': return String(v || '').includes(String(value));
+        case 'not_empty': return v !== undefined && v !== '' && v !== null;
+        case 'empty': return v === undefined || v === '' || v === null;
+        default: return true;
+      }
+    }
+
+    // ── Validation ───────────────────────────────────────
+    function validateField(field) {
+      const v = values[field.id];
+      const rules = field.validation || {};
+
+      if (field.required) {
+        if (v === undefined || v === null || v === '') return 'This field is required';
+        if (Array.isArray(v) && v.length === 0) return 'At least one selection required';
+      }
+
+      if (v === undefined || v === null || v === '') return null;
+
+      if (rules.min_length && String(v).length < rules.min_length) {
+        return 'Minimum ' + rules.min_length + ' characters';
+      }
+      if (rules.max_length && String(v).length > rules.max_length) {
+        return 'Maximum ' + rules.max_length + ' characters';
+      }
+      if (rules.min !== undefined && Number(v) < rules.min) {
+        return 'Minimum value: ' + rules.min;
+      }
+      if (rules.max !== undefined && Number(v) > rules.max) {
+        return 'Maximum value: ' + rules.max;
+      }
+      if (rules.pattern) {
+        const re = new RegExp(rules.pattern);
+        if (!re.test(String(v))) return rules.pattern_message || 'Invalid format';
+      }
+
+      // Built-in type validation
+      if (field.type === 'email' && v) {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Invalid email address';
+      }
+      if (field.type === 'url' && v) {
+        try { new URL(v); } catch { return 'Invalid URL'; }
+      }
+      if (field.type === 'phone' && v) {
+        if (!/^[+]?[\d\s\-().]{7,20}$/.test(v)) return 'Invalid phone number';
+      }
+
+      return null;
+    }
+
+    function validateCurrentFields() {
+      const steps = getWizardSteps();
+      const fields = steps
+        ? getVisibleFields(steps[currentStep].fields)
+        : getVisibleFields(getAllFields());
+
+      let valid = true;
+      errors = {};
+      fields.forEach(f => {
+        if (f.type === 'section' || f.type === 'divider' || f.type === 'step_break') return;
+        const err = validateField(f);
+        if (err) {
+          errors[f.id] = err;
+          valid = false;
+        }
+      });
+      render();
+      return valid;
+    }
+
+    function validateAll() {
+      const fields = getVisibleFields(getAllFields());
+      let valid = true;
+      errors = {};
+      fields.forEach(f => {
+        if (f.type === 'section' || f.type === 'divider' || f.type === 'step_break') return;
+        const err = validateField(f);
+        if (err) {
+          errors[f.id] = err;
+          valid = false;
+        }
+      });
+      return valid;
+    }
+
+    // ── Submit / Cancel ──────────────────────────────────
+    function handleSubmit(extraData) {
+      if (!validateAll()) {
+        // In wizard mode, go to the first step with errors
+        const steps = getWizardSteps();
+        if (steps) {
+          for (let i = 0; i < steps.length; i++) {
+            const hasErr = steps[i].fields.some(f => errors[f.id]);
+            if (hasErr) { currentStep = i; break; }
+          }
+        }
+        render();
+        return;
+      }
+
+      const data = {
+        values: { ...values },
+        metadata: {
+          timestamp: new Date().toISOString(),
+          duration_ms: Date.now() - startTime,
+        },
+        ...extraData,
+      };
+
+      window.flyto.submit(data);
+    }
+
+    function handleCancel() {
+      window.flyto.cancel();
+    }
+
+    // ── Render ───────────────────────────────────────────
+    function render() {
+      const app = document.getElementById('app');
+      const stepType = props.stepType || 'collect_form';
+
+      if (stepType === 'approval_form') {
+        app.innerHTML = renderApprovalForm();
+      } else {
+        app.innerHTML = renderCollectForm();
+      }
+
+      bindEvents();
+    }
+
+    // ── Collect Form Renderer ────────────────────────────
+    function renderCollectForm() {
+      const steps = getWizardSteps();
+      const isWizard = !!steps;
+      const fields = isWizard
+        ? getVisibleFields(steps[currentStep].fields)
+        : getVisibleFields(getAllFields());
+
+      let html = '';
+
+      // Header
+      html += '<div class="header">';
+      html += '<div class="header-left">';
+      html += '<div class="header-title">' + esc(props.title || 'Form') + '</div>';
+      if (props.description) {
+        html += '<div class="header-desc">' + esc(props.description) + '</div>';
+      }
+      html += '</div>';
+      html += '<div class="header-actions">';
+      html += '<button class="flyto-btn flyto-btn-ghost" data-action="cancel">Cancel</button>';
+      if (!isWizard) {
+        html += '<button class="flyto-btn flyto-btn-primary" data-action="submit">' + esc(props.submitLabel || 'Submit') + '</button>';
+      }
+      html += '</div></div>';
+
+      // Wizard steps bar
+      if (isWizard) {
+        html += '<div class="wizard-steps">';
+        steps.forEach((s, i) => {
+          if (i > 0) html += '<div class="wizard-connector' + (i <= currentStep ? ' completed' : '') + '"></div>';
+          const cls = i === currentStep ? 'active' : (i < currentStep ? 'completed' : '');
+          html += '<div class="wizard-step ' + cls + '" data-wizard-step="' + i + '">';
+          html += '<div class="wizard-dot">' + (i < currentStep ? '✓' : (i + 1)) + '</div>';
+          html += '<span>' + esc(s.label) + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+
+      // Form fields
+      html += '<div class="form-body">';
+      html += renderFields(fields);
+      html += '</div>';
+
+      // Footer
+      html += '<div class="footer">';
+      html += '<div class="footer-left">';
+      if (isWizard) {
+        html += 'Step ' + (currentStep + 1) + ' of ' + steps.length;
+      }
+      html += '</div>';
+      html += '<div class="footer-right">';
+      if (isWizard) {
+        if (currentStep > 0) {
+          html += '<button class="flyto-btn flyto-btn-secondary" data-action="prev">Back</button>';
+        }
+        if (currentStep < steps.length - 1) {
+          html += '<button class="flyto-btn flyto-btn-primary" data-action="next">Next</button>';
+        } else {
+          html += '<button class="flyto-btn flyto-btn-primary" data-action="submit">' + esc(props.submitLabel || 'Submit') + '</button>';
+        }
+      }
+      html += '</div></div>';
+
+      return html;
+    }
+
+    // ── Approval Form Renderer ───────────────────────────
+    function renderApprovalForm() {
+      const ctx = props.context || {};
+      const fields = getVisibleFields(props.fields || []);
+
+      let html = '';
+
+      // Header
+      html += '<div class="header">';
+      html += '<div class="header-left">';
+      html += '<div class="header-title">' + esc(props.title || 'Approval Required') + '</div>';
+      html += '</div>';
+      html += '<div class="header-actions">';
+      html += '<button class="flyto-btn flyto-btn-ghost" data-action="cancel">Close</button>';
+      html += '</div></div>';
+
+      html += '<div class="form-body">';
+
+      // Context table
+      const ctxKeys = Object.keys(ctx);
+      if (ctxKeys.length > 0) {
+        html += '<div class="section-title">Context</div>';
+        html += '<table class="context-table">';
+        ctxKeys.forEach(k => {
+          let v = ctx[k];
+          if (typeof v === 'object') v = JSON.stringify(v, null, 2);
+          html += '<tr><td>' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
+        });
+        html += '</table>';
+      }
+
+      // Comment field
+      html += '<div class="field">';
+      html += '<div class="field-label">Comment' + (props.requireComment ? ' <span class="field-required">*</span>' : '') + '</div>';
+      html += '<textarea class="flyto-input" data-field-id="__comment" placeholder="Add a comment...">' + esc(values.__comment || '') + '</textarea>';
+      if (errors.__comment) html += '<div class="field-error">' + esc(errors.__comment) + '</div>';
+      html += '</div>';
+
+      // Additional fields
+      if (fields.length > 0) {
+        html += '<hr class="flyto-divider">';
+        html += renderFields(fields);
+      }
+
+      html += '</div>';
+
+      // Footer with approve / reject
+      html += '<div class="footer">';
+      html += '<div class="footer-left"></div>';
+      html += '<div class="footer-right">';
+      html += '<button class="flyto-btn flyto-btn-danger" data-action="reject">' + esc(props.rejectLabel || 'Reject') + '</button>';
+      html += '<button class="flyto-btn flyto-btn-success" data-action="approve">' + esc(props.approveLabel || 'Approve') + '</button>';
+      html += '</div></div>';
+
+      return html;
+    }
+
+    // ── Field Renderers ──────────────────────────────────
+    function renderFields(fields) {
+      let html = '';
+      fields.forEach(f => {
+        if (f.type === 'section') {
+          html += '<div class="form-section">';
+          html += '<div class="section-title">' + esc(f.label || '') + '</div>';
+          if (f.description) html += '<div class="section-desc">' + esc(f.description) + '</div>';
+          html += '</div>';
+          return;
+        }
+        if (f.type === 'divider') {
+          html += '<hr class="flyto-divider">';
+          return;
+        }
+        if (f.type === 'step_break') return;
+
+        const errCls = errors[f.id] ? ' has-error' : '';
+        html += '<div class="field' + errCls + '" data-field="' + esc(f.id) + '">';
+
+        if (f.type !== 'checkbox' && f.type !== 'toggle') {
+          html += '<div class="field-label">' + esc(f.label || f.id);
+          if (f.required) html += ' <span class="field-required">*</span>';
+          html += '</div>';
+        }
+        if (f.hint) html += '<div class="field-hint">' + esc(f.hint) + '</div>';
+
+        html += renderFieldInput(f);
+
+        if (errors[f.id]) {
+          html += '<div class="field-error">' + esc(errors[f.id]) + '</div>';
+        }
+
+        html += '</div>';
+      });
+      return html;
+    }
+
+    function renderFieldInput(f) {
+      const v = values[f.id];
+      const id = f.id;
+
+      switch (f.type) {
+        case 'text':
+        case 'email':
+        case 'url':
+        case 'phone':
+          const inputType = f.type === 'phone' ? 'tel' : (f.type === 'url' ? 'url' : (f.type === 'email' ? 'email' : 'text'));
+          return '<input class="flyto-input" type="' + inputType + '" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+
+        case 'number':
+          return '<input class="flyto-input" type="number" data-field-id="' + esc(id) + '" value="' + esc(v !== undefined ? v : '') + '" placeholder="' + esc(f.placeholder || '') + '"' +
+            (f.min !== undefined ? ' min="' + f.min + '"' : '') +
+            (f.max !== undefined ? ' max="' + f.max + '"' : '') +
+            (f.step !== undefined ? ' step="' + f.step + '"' : '') + '>';
+
+        case 'textarea':
+          return '<textarea class="flyto-input" data-field-id="' + esc(id) + '" placeholder="' + esc(f.placeholder || '') + '" rows="' + (f.rows || 3) + '">' + esc(v || '') + '</textarea>';
+
+        case 'password':
+          return '<input class="flyto-input" type="password" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+
+        case 'select':
+          return renderSelect(f, v);
+
+        case 'multiselect':
+          return renderMultiSelect(f, v || []);
+
+        case 'radio':
+          return renderRadio(f, v);
+
+        case 'checkbox':
+          return '<div class="checkbox-row' + (v ? ' checked' : '') + '" data-field-id="' + esc(id) + '" data-type="checkbox">' +
+            '<div class="checkbox-box">✓</div>' +
+            '<span class="field-label" style="margin:0">' + esc(f.label || f.id) +
+            (f.required ? ' <span class="field-required">*</span>' : '') +
+            '</span></div>';
+
+        case 'toggle':
+          return '<div style="display:flex;align-items:center;gap:var(--flyto-space-3)">' +
+            '<div class="toggle-track' + (v ? ' on' : '') + '" data-field-id="' + esc(id) + '" data-type="toggle">' +
+            '<div class="toggle-thumb"></div></div>' +
+            '<span class="field-label" style="margin:0">' + esc(f.label || f.id) +
+            (f.required ? ' <span class="field-required">*</span>' : '') +
+            '</span></div>';
+
+        case 'date':
+          return '<input class="flyto-input" type="date" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+
+        case 'time':
+          return '<input class="flyto-input" type="time" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+
+        case 'datetime':
+          return '<input class="flyto-input" type="datetime-local" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+
+        case 'slider':
+          const min = f.min || 0;
+          const max = f.max || 100;
+          const step = f.step || 1;
+          const sv = v !== undefined ? v : min;
+          return '<div class="slider-wrapper">' +
+            '<input type="range" data-field-id="' + esc(id) + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + sv + '">' +
+            '<span class="slider-value" data-slider-display="' + esc(id) + '">' + sv + '</span></div>';
+
+        case 'rating':
+          const rv = v || 0;
+          const maxStars = f.max || 5;
+          let stars = '<div class="rating-row" data-field-id="' + esc(id) + '" data-type="rating" data-max="' + maxStars + '">';
+          for (let i = 1; i <= maxStars; i++) {
+            stars += '<span class="rating-star' + (i <= rv ? ' active' : '') + '" data-star="' + i + '">★</span>';
+          }
+          stars += '</div>';
+          return stars;
+
+        case 'color':
+          return '<div class="color-row">' +
+            '<input type="color" data-field-id="' + esc(id) + '" value="' + esc(v || '#8b5cf6') + '">' +
+            '<span class="color-value" data-color-display="' + esc(id) + '">' + esc(v || '#8b5cf6') + '</span></div>';
+
+        case 'file':
+          return renderFileUpload(f, v);
+
+        default:
+          return '<input class="flyto-input" type="text" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+      }
+    }
+
+    function renderSelect(f, val) {
+      const options = f.options || [];
+      const selected = options.find(o => (o.value || o) === val);
+      const displayText = selected ? (selected.label || selected.value || selected) : '';
+
+      let html = '<div class="select-wrapper" data-field-id="' + esc(f.id) + '" data-type="select">';
+      html += '<button class="select-trigger" type="button">';
+      if (displayText) {
+        html += esc(displayText);
+      } else {
+        html += '<span class="placeholder">' + esc(f.placeholder || 'Select...') + '</span>';
+      }
+      html += '</button>';
+      html += '<div class="select-arrow">▼</div>';
+      html += '<div class="select-dropdown">';
+      options.forEach(o => {
+        const optVal = o.value !== undefined ? o.value : o;
+        const optLabel = o.label || optVal;
+        const selCls = optVal === val ? ' selected' : '';
+        html += '<div class="select-option' + selCls + '" data-value="' + esc(String(optVal)) + '">' + esc(String(optLabel)) + '</div>';
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    function renderMultiSelect(f, selected) {
+      const options = f.options || [];
+      let html = '';
+
+      // Tags
+      if (selected.length > 0) {
+        html += '<div class="multi-tags">';
+        selected.forEach(sv => {
+          const opt = options.find(o => (o.value || o) === sv);
+          const label = opt ? (opt.label || opt.value || opt) : sv;
+          html += '<span class="multi-tag">' + esc(String(label)) + ' <span class="multi-tag-remove" data-field-id="' + esc(f.id) + '" data-remove="' + esc(String(sv)) + '">✕</span></span>';
+        });
+        html += '</div>';
+      }
+
+      // Dropdown
+      html += '<div class="select-wrapper" data-field-id="' + esc(f.id) + '" data-type="multiselect">';
+      html += '<button class="select-trigger" type="button">';
+      html += '<span class="placeholder">' + esc(f.placeholder || 'Select options...') + '</span>';
+      html += '</button>';
+      html += '<div class="select-arrow">▼</div>';
+      html += '<div class="select-dropdown">';
+      options.forEach(o => {
+        const optVal = o.value !== undefined ? o.value : o;
+        const optLabel = o.label || optVal;
+        const selCls = selected.includes(optVal) ? ' selected' : '';
+        html += '<div class="select-option' + selCls + '" data-value="' + esc(String(optVal)) + '">' + esc(String(optLabel)) + '</div>';
+      });
+      html += '</div></div>';
+      return html;
+    }
+
+    function renderRadio(f, val) {
+      const options = f.options || [];
+      let html = '<div class="radio-group" data-field-id="' + esc(f.id) + '" data-type="radio">';
+      options.forEach(o => {
+        const optVal = o.value !== undefined ? o.value : o;
+        const optLabel = o.label || optVal;
+        const selCls = optVal === val ? ' selected' : '';
+        html += '<div class="radio-row' + selCls + '" data-value="' + esc(String(optVal)) + '">';
+        html += '<div class="radio-dot-outer"><div class="radio-dot-inner"></div></div>';
+        html += '<span class="radio-label">' + esc(String(optLabel)) + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      return html;
+    }
+
+    function renderFileUpload(f, val) {
+      const accept = f.accept || '';
+      let html = '<div class="file-drop" data-field-id="' + esc(f.id) + '" data-type="file" data-accept="' + esc(accept) + '">';
+      html += '<input type="file"' + (accept ? ' accept="' + esc(accept) + '"' : '') + '>';
+      html += '📎 Click or drop file here';
+      html += '</div>';
+
+      if (val && val.name) {
+        html += '<div class="file-preview">';
+        html += '<span class="file-preview-name">' + esc(val.name) + '</span>';
+        html += '<span class="file-preview-size">' + formatSize(val.size || 0) + '</span>';
+        html += '<button class="file-remove" data-field-id="' + esc(f.id) + '" data-type="file-remove">✕</button>';
+        html += '</div>';
+      }
+
+      return html;
+    }
+
+    // ── Event Binding ────────────────────────────────────
+    function bindEvents() {
+      const app = document.getElementById('app');
+
+      // Action buttons
+      app.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const action = e.currentTarget.dataset.action;
+          if (action === 'cancel') handleCancel();
+          else if (action === 'submit') handleSubmit({});
+          else if (action === 'next') {
+            if (validateCurrentFields()) {
+              currentStep++;
+              render();
+            }
+          }
+          else if (action === 'prev') { currentStep--; render(); }
+          else if (action === 'approve') {
+            if (props.requireComment && !values.__comment) {
+              errors.__comment = 'Comment is required';
+              render();
+              return;
+            }
+            if (!validateAll()) { render(); return; }
+            handleSubmit({ decision: 'approved', comment: values.__comment || '' });
+          }
+          else if (action === 'reject') {
+            if (props.requireComment && !values.__comment) {
+              errors.__comment = 'Comment is required';
+              render();
+              return;
+            }
+            handleSubmit({ decision: 'rejected', comment: values.__comment || '' });
+          }
+        });
+      });
+
+      // Text / number / date / time / textarea / password inputs
+      app.querySelectorAll('input.flyto-input, textarea.flyto-input, input[type="date"], input[type="time"], input[type="datetime-local"], input[type="number"]').forEach(el => {
+        const fid = el.dataset.fieldId;
+        if (!fid) return;
+        el.addEventListener('input', e => {
+          const field = getAllFields().find(f => f.id === fid);
+          if (field && field.type === 'number') {
+            values[fid] = e.target.value === '' ? undefined : Number(e.target.value);
+          } else {
+            values[fid] = e.target.value;
+          }
+          if (errors[fid]) { delete errors[fid]; render(); }
+        });
+      });
+
+      // Comment textarea (approval)
+      app.querySelectorAll('textarea[data-field-id="__comment"]').forEach(el => {
+        el.addEventListener('input', e => { values.__comment = e.target.value; });
+      });
+
+      // Select dropdowns
+      app.querySelectorAll('[data-type="select"]').forEach(wrapper => {
+        const trigger = wrapper.querySelector('.select-trigger');
+        const dropdown = wrapper.querySelector('.select-dropdown');
+        const fid = wrapper.dataset.fieldId;
+
+        trigger.addEventListener('click', e => {
+          e.stopPropagation();
+          // Close others
+          app.querySelectorAll('.select-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+          dropdown.classList.toggle('open');
+        });
+
+        dropdown.querySelectorAll('.select-option').forEach(opt => {
+          opt.addEventListener('click', e => {
+            values[fid] = opt.dataset.value;
+            dropdown.classList.remove('open');
+            if (errors[fid]) delete errors[fid];
+            render();
+          });
+        });
+      });
+
+      // Multi-select
+      app.querySelectorAll('[data-type="multiselect"]').forEach(wrapper => {
+        const trigger = wrapper.querySelector('.select-trigger');
+        const dropdown = wrapper.querySelector('.select-dropdown');
+        const fid = wrapper.dataset.fieldId;
+
+        trigger.addEventListener('click', e => {
+          e.stopPropagation();
+          app.querySelectorAll('.select-dropdown.open').forEach(d => { if (d !== dropdown) d.classList.remove('open'); });
+          dropdown.classList.toggle('open');
+        });
+
+        dropdown.querySelectorAll('.select-option').forEach(opt => {
+          opt.addEventListener('click', () => {
+            const arr = values[fid] || [];
+            const val = opt.dataset.value;
+            const idx = arr.indexOf(val);
+            if (idx >= 0) arr.splice(idx, 1);
+            else arr.push(val);
+            values[fid] = [...arr];
+            if (errors[fid]) delete errors[fid];
+            render();
+          });
+        });
+      });
+
+      // Multi-tag remove
+      app.querySelectorAll('.multi-tag-remove').forEach(el => {
+        el.addEventListener('click', () => {
+          const fid = el.dataset.fieldId;
+          const rm = el.dataset.remove;
+          values[fid] = (values[fid] || []).filter(v => v !== rm);
+          render();
+        });
+      });
+
+      // Checkbox
+      app.querySelectorAll('[data-type="checkbox"]').forEach(el => {
+        el.addEventListener('click', () => {
+          const fid = el.dataset.fieldId;
+          values[fid] = !values[fid];
+          render();
+        });
+      });
+
+      // Toggle
+      app.querySelectorAll('[data-type="toggle"]').forEach(el => {
+        el.addEventListener('click', () => {
+          const fid = el.dataset.fieldId;
+          values[fid] = !values[fid];
+          render();
+        });
+      });
+
+      // Radio
+      app.querySelectorAll('[data-type="radio"]').forEach(group => {
+        const fid = group.dataset.fieldId;
+        group.querySelectorAll('.radio-row').forEach(row => {
+          row.addEventListener('click', () => {
+            values[fid] = row.dataset.value;
+            if (errors[fid]) delete errors[fid];
+            render();
+          });
+        });
+      });
+
+      // Slider
+      app.querySelectorAll('input[type="range"]').forEach(el => {
+        const fid = el.dataset.fieldId;
+        el.addEventListener('input', e => {
+          values[fid] = Number(e.target.value);
+          const disp = app.querySelector('[data-slider-display="' + fid + '"]');
+          if (disp) disp.textContent = e.target.value;
+        });
+      });
+
+      // Rating
+      app.querySelectorAll('[data-type="rating"]').forEach(group => {
+        const fid = group.dataset.fieldId;
+        group.querySelectorAll('.rating-star').forEach(star => {
+          star.addEventListener('click', () => {
+            values[fid] = Number(star.dataset.star);
+            render();
+          });
+        });
+      });
+
+      // Color
+      app.querySelectorAll('input[type="color"]').forEach(el => {
+        const fid = el.dataset.fieldId;
+        el.addEventListener('input', e => {
+          values[fid] = e.target.value;
+          const disp = app.querySelector('[data-color-display="' + fid + '"]');
+          if (disp) disp.textContent = e.target.value;
+        });
+      });
+
+      // File upload
+      app.querySelectorAll('[data-type="file"]').forEach(drop => {
+        const fid = drop.dataset.fieldId;
+        const fileInput = drop.querySelector('input[type="file"]');
+
+        drop.addEventListener('click', () => fileInput.click());
+        drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('dragover'); });
+        drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+        drop.addEventListener('drop', e => {
+          e.preventDefault();
+          drop.classList.remove('dragover');
+          if (e.dataTransfer.files[0]) handleFile(fid, e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', e => {
+          if (e.target.files[0]) handleFile(fid, e.target.files[0]);
+        });
+      });
+
+      // File remove
+      app.querySelectorAll('[data-type="file-remove"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          values[btn.dataset.fieldId] = undefined;
+          render();
+        });
+      });
+
+      // Wizard step click
+      app.querySelectorAll('[data-wizard-step]').forEach(el => {
+        el.addEventListener('click', () => {
+          const target = Number(el.dataset.wizardStep);
+          // Can only go back or to already-validated steps
+          if (target < currentStep) {
+            currentStep = target;
+            render();
+          }
+        });
+      });
+
+      // Close dropdowns on outside click
+      document.addEventListener('click', () => {
+        app.querySelectorAll('.select-dropdown.open').forEach(d => d.classList.remove('open'));
+      });
+    }
+
+    function handleFile(fieldId, file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        values[fieldId] = {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          data: reader.result,
+        };
+        render();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ── Utils ────────────────────────────────────────────
+    function esc(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    // ── Keyboard ─────────────────────────────────────────
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') handleCancel();
+      if (e.key === 'Enter' && e.metaKey) {
+        e.preventDefault();
+        if (props.stepType === 'approval_form') {
+          document.querySelector('[data-action="approve"]')?.click();
+        } else {
+          handleSubmit({});
+        }
+      }
+    });
+
+    // ── Start ────────────────────────────────────────────
+    if (window.flyto) {
+      init();
+    } else {
+      const check = setInterval(() => {
+        if (window.flyto) { clearInterval(check); init(); }
+      }, 50);
+      setTimeout(() => clearInterval(check), 5000);
+    }
+  })();
+  </script>
+</body>
+</html>

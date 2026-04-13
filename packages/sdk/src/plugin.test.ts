@@ -169,4 +169,50 @@ describe("FlytoPlugin", () => {
       assert.equal(res, null);
     });
   });
+
+  describe("uiStep registration", () => {
+    it("should include UI steps in handshake response", async () => {
+      plugin.uiStep(
+        "crop",
+        { page: "ui", type: "dialog", width: 800, height: 600 },
+        async (_input, ctx) => ({ ok: true, data: {} })
+      );
+
+      const res = await handle({
+        jsonrpc: "2.0",
+        method: "handshake",
+        params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" },
+        id: 100,
+      });
+
+      assert.ok(res);
+      const result = res.result as {
+        steps: string[];
+        ui: Record<string, { type: string; width?: number; height?: number }>;
+      };
+      // Should include both headless and UI steps
+      assert.ok(result.steps.includes("echo"));
+      assert.ok(result.steps.includes("fail"));
+      assert.ok(result.steps.includes("crop"));
+      // Should report UI metadata
+      assert.ok(result.ui);
+      assert.equal(result.ui.crop.type, "dialog");
+      assert.equal(result.ui.crop.width, 800);
+      assert.equal(result.ui.crop.height, 600);
+    });
+
+    it("should return STEP_NOT_FOUND for unregistered UI step", async () => {
+      const res = await handle({
+        jsonrpc: "2.0",
+        method: "invoke",
+        params: { step: "no_such_ui_step", input: {} },
+        id: 101,
+      });
+
+      assert.ok(res);
+      const result = res.result as { ok: boolean; error: { code: string } };
+      assert.equal(result.ok, false);
+      assert.equal(result.error.code, "STEP_NOT_FOUND");
+    });
+  });
 });

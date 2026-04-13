@@ -18,11 +18,18 @@
  */
 
 export { FlytoPlugin } from "./plugin.js";
+export { UIServer } from "./ui-server.js";
 export type {
   PluginConfig,
   StepHandler,
   StepContext,
   StepResult,
+  StepUIConfig,
+  UIResult,
+  UIStepContext,
+  UIStepHandler,
+  UIServerConfig,
+  UIWaitOptions,
   JsonRpcRequest,
   JsonRpcResponse,
 } from "./types.js";
