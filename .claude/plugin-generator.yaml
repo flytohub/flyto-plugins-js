@@ -1,0 +1,125 @@
+# Plugin Generator Template
+# Usage: Tell Claude "用 plugin-generator 建一個 [name] plugin"
+#
+# Claude reads this file and generates all required files for a new plugin.
+
+# ── Input (Claude fills based on user request) ───────────
+input:
+  name: ""              # e.g., "data-mapper"
+  vendor: "flyto-community"
+  display_name: ""      # e.g., "Data Mapper"
+  description: ""       # one-line
+  category: ""          # e.g., "data", "media", "human-in-the-loop", "notification"
+  icon: ""              # Lucide icon name
+  color: ""             # hex color
+
+  # Steps to generate
+  steps:
+    - id: ""            # e.g., "map_fields"
+      label: ""
+      description: ""
+      type: headless | ui
+      # If ui:
+      ui_type: dialog | panel | page
+      ui_width: 720
+      ui_height: 600
+      # Params
+      params:
+        - id: ""
+          type: string | number | boolean | array | object
+          label: ""
+          required: true
+      # Output
+      output:
+        - id: ""
+          type: string
+          description: ""
+
+# ── Output Files (Claude generates all of these) ─────────
+output:
+  # 1. plugins/{name}/package.json
+  package_json:
+    name: "@flyto/plugin-{name}"
+    version: "0.1.0"
+    dependencies:
+      "@flyto/plugin-sdk": "^0.1.0"
+    scripts:
+      build: tsc
+      test: "node --test dist/**/*.test.js"
+      start: "node dist/index.js"
+
+  # 2. plugins/{name}/tsconfig.json
+  tsconfig:
+    extends: "../../tsconfig.json"
+    compilerOptions:
+      outDir: dist
+      rootDir: src
+
+  # 3. plugins/{name}/plugin.yaml
+  plugin_yaml:
+    # Generated from input.steps with full schema
+
+  # 4. plugins/{name}/src/index.ts
+  index_ts:
+    # Pattern:
+    #   import { createPlugin } from "@flyto/plugin-sdk";
+    #   const plugin = createPlugin({ id, version, name });
+    #
+    #   // For headless steps:
+    #   plugin.step("step_id", async (input, ctx) => { ... });
+    #
+    #   // For UI steps:
+    #   plugin.uiStep("step_id", { page, type, width, height }, async (input, ctx) => {
+    #     const result = await ctx.waitForUI({ page, props: { ... } });
+    #     return { ok: true, data: result.data };
+    #   });
+    #
+    #   plugin.start();
+
+  # 5. plugins/{name}/src/index.test.ts
+  index_test_ts:
+    # Pattern:
+    #   - Test step registration via handshake
+    #   - Test param validation (missing required → error)
+    #   - Test happy path with mocked data
+    #   - For UI steps: test registration metadata (type, width, height)
+
+  # 6. plugins/{name}/ui/index.html (only for UI steps)
+  ui_html:
+    # Pattern:
+    #   - <!DOCTYPE html> with <head></head> (tokens auto-injected)
+    #   - Use var(--flyto-*) CSS variables for styling
+    #   - Use .flyto-btn, .flyto-input, .flyto-card utility classes
+    #   - window.flyto.props for input data
+    #   - window.flyto.submit(data) to return result
+    #   - window.flyto.cancel() to cancel
+    #   - Escape key → cancel, Cmd+Enter → submit
+
+# ── Rules ─────────────────────────────────────────────────
+rules:
+  - All source files start with: // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
+  - Plugin runtime ID format: "{vendor}/{name}"
+  - npm package name format: "@flyto/plugin-{name}"
+  - Module registry key becomes: "plugin.{vendor}/{name}/{step_id}"
+  - Use node:test for testing, not Jest
+  - UI files use vanilla JS only — no framework, no build step
+  - CSS uses flyto design tokens only — no custom colors
+  - All UI text must be in English
+  - postMessage callback uses 127.0.0.1, not localhost
+  - Error responses follow: { ok: false, error: { code: "UPPER_SNAKE", message: "..." } }
+  - Step handlers validate required params before calling waitForUI
+  - UI steps must handle both submit and cancel paths
+
+# ── Checklist (Claude verifies before marking done) ───────
+checklist:
+  - [ ] package.json has correct name, version, dependencies
+  - [ ] tsconfig.json extends root
+  - [ ] plugin.yaml matches TS implementation
+  - [ ] All steps in plugin.yaml have handlers in index.ts
+  - [ ] Required params validated in handlers
+  - [ ] Test file covers: registration, validation, happy path
+  - [ ] UI uses flyto design tokens (no hardcoded colors)
+  - [ ] UI handles Escape/Cmd+Enter keyboard shortcuts
+  - [ ] npm run build succeeds
+  - [ ] npm test passes
+  - [ ] Symlink to ~/.flyto/plugins/ if needed
