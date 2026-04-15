@@ -18,6 +18,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # required by --provenance
     steps:
       - uses: actions/checkout@v4
 
