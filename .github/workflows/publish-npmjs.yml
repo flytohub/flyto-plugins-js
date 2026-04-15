@@ -32,6 +32,8 @@ jobs:
 
       - run: npm ci
       - run: npm run build --workspaces --if-present
+      - name: Run tests (block publish on failure)
+        run: npm test --workspaces --if-present
 
       - name: Publish all non-private workspaces (public)
         # `--access public` is required for first-time publish of a
