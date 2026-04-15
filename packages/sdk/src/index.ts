@@ -1,12 +1,12 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
 /**
- * @flyto/plugin-sdk
+ * @flyto2/plugin-sdk
  *
  * SDK for building Flyto2 plugins in TypeScript/JavaScript.
  *
  * Usage:
- *   import { createPlugin } from '@flyto/plugin-sdk';
+ *   import { createPlugin } from '@flyto2/plugin-sdk';
  *
  *   const plugin = createPlugin({ id: 'my-plugin', version: '1.0.0' });
  *

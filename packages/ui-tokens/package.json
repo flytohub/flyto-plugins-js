@@ -1,5 +1,5 @@
 {
-  "name": "@flyto/plugin-ui-tokens",
+  "name": "@flyto2/plugin-ui-tokens",
   "version": "0.1.0",
   "description": "Design tokens for Flyto2 plugin UIs — CSS variables for colors, spacing, radius, shadows, typography",
   "main": "src/tokens.css",

@@ -1,11 +1,11 @@
-# @flyto/plugin-sdk
+# @flyto2/plugin-sdk
 
 SDK for building Flyto2 plugins in TypeScript/JavaScript.
 
 ## Usage
 
 ```typescript
-import { createPlugin } from '@flyto/plugin-sdk';
+import { createPlugin } from '@flyto2/plugin-sdk';
 
 const plugin = createPlugin({ id: 'my-org/my-plugin', version: '1.0.0' });
 

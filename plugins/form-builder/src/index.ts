@@ -8,8 +8,8 @@
  *   2. approval_form — context display + approve/reject + optional fields
  */
 
-import { createPlugin } from "@flyto/plugin-sdk";
-import type { StepResult } from "@flyto/plugin-sdk";
+import { createPlugin } from "@flyto2/plugin-sdk";
+import type { StepResult } from "@flyto2/plugin-sdk";
 
 const plugin = createPlugin({
   id: "flyto-community/form-builder",

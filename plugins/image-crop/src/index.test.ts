@@ -9,8 +9,8 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createPlugin } from "@flyto/plugin-sdk";
-import type { JsonRpcRequest, JsonRpcResponse } from "@flyto/plugin-sdk";
+import { createPlugin } from "@flyto2/plugin-sdk";
+import type { JsonRpcRequest, JsonRpcResponse } from "@flyto2/plugin-sdk";
 
 function getHandler(plugin: ReturnType<typeof createPlugin>) {
   return (req: JsonRpcRequest) =>

@@ -1,5 +1,5 @@
 {
-  "name": "@flyto/plugin-slack",
+  "name": "@flyto2/plugin-slack",
   "version": "0.1.0",
   "description": "Flyto2 Slack integration plugin",
   "main": "dist/index.js",
@@ -27,7 +27,7 @@
     "access": "restricted"
   },
   "dependencies": {
-    "@flyto/plugin-sdk": "^0.1.0",
+    "@flyto2/plugin-sdk": "^0.1.0",
     "@slack/web-api": "^7.0.0"
   },
   "devDependencies": {

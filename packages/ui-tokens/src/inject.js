@@ -5,7 +5,7 @@
  * CSS variables at runtime (e.g., when the host sends a theme update).
  *
  * Usage:
- *   import { injectTokens } from '@flyto/plugin-ui-tokens/inject';
+ *   import { injectTokens } from '@flyto2/plugin-ui-tokens/inject';
  *   injectTokens({ '--flyto-primary': '#8b5cf6', ... });
  */
 

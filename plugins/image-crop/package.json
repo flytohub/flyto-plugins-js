@@ -1,5 +1,5 @@
 {
-  "name": "@flyto/plugin-image-crop",
+  "name": "@flyto2/plugin-image-crop",
   "version": "0.1.0",
   "description": "Interactive image cropping tool for Flyto2 workflows",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@flyto/plugin-sdk": "^0.1.0"
+    "@flyto2/plugin-sdk": "^0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

@@ -1,5 +1,5 @@
 {
-  "name": "@flyto/plugin-ui-bridge",
+  "name": "@flyto2/plugin-ui-bridge",
   "version": "0.1.0",
   "description": "Communication bridge between Flyto2 plugin UIs and the host app",
   "type": "module",

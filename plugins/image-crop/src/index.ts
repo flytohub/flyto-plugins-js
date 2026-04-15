@@ -7,7 +7,7 @@
  * can crop an image, then returns the cropped result to the workflow.
  */
 
-import { createPlugin } from "@flyto/plugin-sdk";
+import { createPlugin } from "@flyto2/plugin-sdk";
 
 const plugin = createPlugin({
   id: "flyto-community/image-crop",

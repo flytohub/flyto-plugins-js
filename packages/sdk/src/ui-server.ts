@@ -45,7 +45,7 @@ function findBridgeFile(filename: string): string | null {
 
   // Try node_modules
   try {
-    const resolved = require.resolve(`@flyto/plugin-ui-bridge/${filename}`);
+    const resolved = require.resolve(`@flyto2/plugin-ui-bridge/${filename}`);
     return resolved;
   } catch {
     return null;
@@ -58,7 +58,7 @@ function findTokensFile(filename: string): string | null {
   if (fs.existsSync(monorepo)) return monorepo;
 
   try {
-    const resolved = require.resolve(`@flyto/plugin-ui-tokens/${filename}`);
+    const resolved = require.resolve(`@flyto2/plugin-ui-tokens/${filename}`);
     return resolved;
   } catch {
     return null;

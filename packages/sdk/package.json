@@ -1,5 +1,5 @@
 {
-  "name": "@flyto/plugin-sdk",
+  "name": "@flyto2/plugin-sdk",
   "version": "0.1.0",
   "description": "SDK for building Flyto2 plugins in TypeScript/JavaScript",
   "main": "dist/index.js",

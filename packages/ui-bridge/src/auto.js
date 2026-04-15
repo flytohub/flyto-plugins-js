@@ -5,13 +5,13 @@
  * expose the bridge as `window.flyto`.
  *
  * Usage in HTML:
- *   <script type="module" src="/@flyto/bridge/auto"></script>
+ *   <script type="module" src="/@flyto2/bridge/auto"></script>
  *   <script>
  *     flyto.submit({ cropped: true });
  *   </script>
  *
  * Or import in JS:
- *   import '@flyto/plugin-ui-bridge/auto';
+ *   import '@flyto2/plugin-ui-bridge/auto';
  *   window.flyto.submit({ result: 'done' });
  */
 

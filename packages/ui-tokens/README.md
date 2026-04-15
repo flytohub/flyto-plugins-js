@@ -1,4 +1,4 @@
-# @flyto/plugin-ui-tokens
+# @flyto2/plugin-ui-tokens
 
 CSS design tokens for Flyto2 plugin UIs. Import this package to match the flyto-cloud dark theme.
 
@@ -6,7 +6,7 @@ CSS design tokens for Flyto2 plugin UIs. Import this package to match the flyto-
 
 ### In HTML (auto-injected by SDK)
 
-When using `@flyto/plugin-sdk` with a UI step, tokens are automatically injected into your HTML. Just use the CSS variables:
+When using `@flyto2/plugin-sdk` with a UI step, tokens are automatically injected into your HTML. Just use the CSS variables:
 
 ```css
 .my-button {
@@ -20,11 +20,11 @@ When using `@flyto/plugin-sdk` with a UI step, tokens are automatically injected
 ### Manual Import
 
 ```html
-<link rel="stylesheet" href="@flyto/plugin-ui-tokens">
+<link rel="stylesheet" href="@flyto2/plugin-ui-tokens">
 ```
 
 ```css
-@import '@flyto/plugin-ui-tokens';
+@import '@flyto2/plugin-ui-tokens';
 ```
 
 ## Tokens

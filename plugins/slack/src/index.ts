@@ -3,10 +3,10 @@
 /**
  * Flyto2 Slack Plugin
  *
- * Reference implementation of a TypeScript plugin using @flyto/plugin-sdk.
+ * Reference implementation of a TypeScript plugin using @flyto2/plugin-sdk.
  */
 
-import { createPlugin } from "@flyto/plugin-sdk";
+import { createPlugin } from "@flyto2/plugin-sdk";
 import { WebClient } from "@slack/web-api";
 
 const plugin = createPlugin({

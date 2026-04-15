@@ -8,10 +8,10 @@ A plugin has two identifiers:
 
 | Identifier | Where | Example | Purpose |
 |---|---|---|---|
-| **npm package name** | `package.json` `"name"` | `@flyto/plugin-slack` | npm install/publish |
+| **npm package name** | `package.json` `"name"` | `@flyto2/plugin-slack` | npm install/publish |
 | **plugin runtime ID** | `plugin.yaml` `id` | `flyto-community/slack` | Runtime dispatch, module registry |
 
-- npm name uses `@flyto/plugin-*` scope for official plugins
+- npm name uses `@flyto2/plugin-*` scope for official plugins
 - Runtime ID uses `vendor/name` format (e.g., `flyto-community/slack`, `acme-corp/custom-tool`)
 - The module registry key becomes `plugin.{runtime_id}/{step_id}`
 

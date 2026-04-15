@@ -1,4 +1,4 @@
-# @flyto/plugin-ui-bridge
+# @flyto2/plugin-ui-bridge
 
 Communication bridge between Flyto2 plugin UIs and the host app. Handles bidirectional messaging, theme sync, and result submission.
 
@@ -6,7 +6,7 @@ Communication bridge between Flyto2 plugin UIs and the host app. Handles bidirec
 
 ### Auto-injected (recommended)
 
-When using `@flyto/plugin-sdk` with a UI step, the bridge is automatically injected as `window.flyto`:
+When using `@flyto2/plugin-sdk` with a UI step, the bridge is automatically injected as `window.flyto`:
 
 ```html
 <button onclick="flyto.submit({ result: 'done' })">Submit</button>
@@ -16,7 +16,7 @@ When using `@flyto/plugin-sdk` with a UI step, the bridge is automatically injec
 ### Manual Import
 
 ```javascript
-import { createBridge } from '@flyto/plugin-ui-bridge';
+import { createBridge } from '@flyto2/plugin-ui-bridge';
 
 const bridge = createBridge();
 

@@ -1,7 +1,7 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
 /**
- * @flyto/plugin-ui-bridge
+ * @flyto2/plugin-ui-bridge
  *
  * Lightweight bridge that runs inside a plugin UI iframe.
  * Handles bidirectional communication with the host (flyto-cloud or SDK dev server).
