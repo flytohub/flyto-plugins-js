@@ -14,5 +14,14 @@
   "devDependencies": {
     "typescript": "^5.4.0"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flytohub/flyto-plugins-js.git",
+    "directory": "plugins/image-crop"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  }
 }

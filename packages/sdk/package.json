@@ -20,6 +20,15 @@
     "automation"
   ],
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flytohub/flyto-plugins-js.git",
+    "directory": "packages/sdk"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "engines": {
     "node": ">=18.0.0"
   },
