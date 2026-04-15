@@ -1,0 +1,38 @@
+name: Publish to npmjs.com (public)
+
+# Dual-publish: GitHub Packages (publish.yml) handles internal/private
+# distribution, this one publishes the same tag to npmjs.com so the
+# packages get the npmjs.com SEO presence + free DR-92 backlink.
+#
+# Setup needed once:
+#   1. Create the @flyto scope on npmjs.com
+#   2. Generate an automation token at npmjs.com/settings/<user>/tokens
+#   3. Add it as repo secret NPM_TOKEN
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@flyto'
+
+      - run: npm ci
+      - run: npm run build --workspaces --if-present
+
+      - name: Publish all non-private workspaces (public)
+        # `--access public` is required for first-time publish of a
+        # scoped @flyto/* package on npmjs.com (free plan).
+        run: npm publish --workspaces --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
