@@ -20,6 +20,9 @@
   ],
   "keywords": ["flyto", "plugin", "bridge", "iframe"],
   "license": "Apache-2.0",
+  "homepage": "https://flyto2.com",
+  "bugs": { "url": "https://github.com/flytohub/flyto-plugins-js/issues" },
+  "author": "Flyto (https://flyto2.com)",
   "repository": {
     "type": "git",
     "url": "https://github.com/flytohub/flyto-plugins-js.git",
