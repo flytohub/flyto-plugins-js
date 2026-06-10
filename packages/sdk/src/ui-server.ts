@@ -78,6 +78,21 @@ async function findFreePort(preferred: number = 0): Promise<number> {
 }
 
 /**
+ * Serialize a value for safe embedding inside an inline <script> as a JS literal.
+ *
+ * JSON.stringify alone is NOT enough: characters such as `<` (in `</script>`),
+ * U+2028 and U+2029 are valid in JSON strings but break out of / terminate an
+ * inline script when the HTML parser sees them. We escape them to their unicode
+ * forms so the embedded value can never close the script tag or break the JS.
+ */
+function serializeForScript(value: unknown): string {
+  return JSON.stringify(value).replace(
+    /[<>&\u2028\u2029]/g,
+    (ch) => "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0"),
+  );
+}
+
+/**
  * Build the HTML wrapper that injects bridge + tokens.
  */
 function buildInjectionScript(port: number, requestId: string, props: Record<string, unknown>): string {
@@ -88,7 +103,7 @@ function buildInjectionScript(port: number, requestId: string, props: Record<str
   (function() {
     const FLYTO_MSG_PREFIX = 'flyto-plugin:';
     const PORT = ${port};
-    const REQ_ID = '${requestId}';
+    const REQ_ID = ${serializeForScript(requestId)};
     const PROPS = JSON.parse(decodeURIComponent('${encodedProps}'));
 
     let currentProps = PROPS;

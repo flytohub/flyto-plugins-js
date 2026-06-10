@@ -99,6 +99,74 @@ describe("UIServer", () => {
     });
   });
 
+  describe("bridge injection — requestId script-injection hardening", () => {
+    it("should neutralize a JS string-breakout payload in __flyto_req", async () => {
+      tmpDir = createTempUI("<html><head><title>Test</title></head><body>content</body></html>");
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+
+      // Attacker-controllable __flyto_req value that, if interpolated raw into
+      // `const REQ_ID = '<here>';`, would break out of the string literal and
+      // execute arbitrary JS.
+      const payload = "'; window.__pwned = true; var x='";
+      const res = await fetch(
+        `http://127.0.0.1:${port}/?__flyto_req=${encodeURIComponent(payload)}`,
+      );
+      assert.equal(res.status, 200);
+      const html = await res.text();
+
+      // Vulnerable behavior would interpolate the raw payload into a
+      // single-quoted literal: `const REQ_ID = '<payload>';`. That exact,
+      // string-breaking form must NOT appear.
+      assert.ok(
+        !html.includes(`const REQ_ID = '${payload}'`),
+        "requestId was interpolated raw into a single-quoted literal (breakout possible)",
+      );
+      // The payload must NOT escape into an executable top-level statement.
+      // After the fix the assignment is a balanced JSON string literal, so the
+      // bare statement `window.__pwned = true;` only exists *inside* quotes.
+      // The whole, correctly-serialized REQ_ID line must be present verbatim.
+      assert.ok(
+        html.includes(`const REQ_ID = ${JSON.stringify(payload)};`),
+        "REQ_ID was not safely serialized as a JSON string literal",
+      );
+    });
+
+    it("should neutralize a </script> breakout payload in __flyto_req", async () => {
+      tmpDir = createTempUI("<html><head><title>Test</title></head><body>content</body></html>");
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+
+      const payload = "</script><img src=x onerror=alert(1)>";
+      const res = await fetch(
+        `http://127.0.0.1:${port}/?__flyto_req=${encodeURIComponent(payload)}`,
+      );
+      assert.equal(res.status, 200);
+      const html = await res.text();
+
+      // Isolate the injected REQ_ID assignment line.
+      const reqLine = html.split("\n").find((l) => l.includes("const REQ_ID ="));
+      assert.ok(reqLine, "REQ_ID line missing from injected script");
+
+      // The `<` chars from the payload must be unicode-escaped (<), so the
+      // HTML parser cannot see `</script>` (which would terminate the injected
+      // script) nor an `<img ...>` element. The raw breakout form must be gone.
+      assert.ok(
+        !reqLine!.includes("</script>"),
+        "closing-script sequence survived unescaped in the REQ_ID line",
+      );
+      assert.ok(
+        !reqLine!.includes("<img"),
+        "an <img tag survived unescaped in the REQ_ID line",
+      );
+      // Confirm the safe, escaped serialization is what actually got emitted.
+      assert.ok(
+        reqLine!.includes("\\u003c/script\\u003e"),
+        "payload `<` was not unicode-escaped",
+      );
+    });
+  });
+
   describe("CORS", () => {
     it("should include CORS headers", async () => {
       tmpDir = createTempUI();
