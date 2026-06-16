@@ -12,7 +12,7 @@
     "@flyto2/plugin-sdk": "^0.1.0"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "typescript": "^6.0.3"
   },
   "license": "Apache-2.0",
   "homepage": "https://flyto2.com",
