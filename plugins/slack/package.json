@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@flyto2/plugin-sdk": "^0.1.0",
-    "@slack/web-api": "^7.0.0"
+    "@slack/web-api": "^7.17.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
