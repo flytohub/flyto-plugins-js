@@ -38,7 +38,7 @@ import type { PluginConfig } from "./types.js";
 import { FlytoPlugin } from "./plugin.js";
 
 /**
- * Create a new Flyto plugin instance.
+ * Create a new Flyto2 plugin instance.
  *
  * @param config - Plugin configuration (id, version)
  * @returns FlytoPlugin instance with step() and start() methods

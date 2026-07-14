@@ -1,7 +1,7 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
 /**
- * Flyto Plugin SDK — Embedded UI Server
+ * Flyto2 Plugin SDK — Embedded UI Server
  *
  * Lightweight HTTP server that:
  * 1. Serves plugin UI static files (HTML/CSS/JS/images)
@@ -99,7 +99,7 @@ function buildInjectionScript(port: number, requestId: string, props: Record<str
   const encodedProps = encodeURIComponent(JSON.stringify(props));
   return `
 <script>
-  // Flyto Plugin Bridge — auto-injected by SDK
+  // Flyto2 Plugin Bridge — auto-injected by SDK
   (function() {
     const FLYTO_MSG_PREFIX = 'flyto-plugin:';
     const PORT = ${port};

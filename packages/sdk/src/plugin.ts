@@ -1,7 +1,7 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
 /**
- * Flyto Plugin SDK — Plugin runtime
+ * Flyto2 Plugin SDK — Plugin runtime
  *
  * Listens on stdin for JSON-RPC 2.0 messages from flyto-core,
  * dispatches to registered step handlers, writes results to stdout.

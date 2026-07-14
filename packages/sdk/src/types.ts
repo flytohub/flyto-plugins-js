@@ -1,7 +1,7 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
 /**
- * Flyto Plugin SDK — Type definitions
+ * Flyto2 Plugin SDK — Type definitions
  */
 
 /** JSON-RPC 2.0 request */
