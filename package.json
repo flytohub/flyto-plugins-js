@@ -1,6 +1,16 @@
 {
   "name": "flyto-plugins-js",
   "private": true,
+  "description": "Flyto2 TypeScript and JavaScript plugin SDK with official automation plugins.",
+  "homepage": "https://flyto2.com",
+  "author": "Flyto2 (https://flyto2.com)",
+  "bugs": {
+    "url": "https://github.com/flytohub/flyto-plugins-js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/flytohub/flyto-plugins-js.git"
+  },
   "workspaces": [
     "packages/*",
     "plugins/*"
