@@ -10,10 +10,22 @@ communicate with Flyto2 Core over JSON-RPC, and can serve inline UI for forms,
 tools, approvals, image editing, Slack actions, and human-in-the-loop workflow
 steps.
 
+Use this when a workflow needs a real interface, not just another headless
+function call. A plugin can ask a person for approval, show a form, crop an
+image, send a Slack message, or bridge a deterministic backend step into a small
+browser UI.
+
 Use it to build JavaScript and TypeScript automation plugins for Flyto2 Core,
 Flyto2 Cloud, self-hosted workflows, MCP-adjacent tools, and workflow UIs that
 need a clean bridge between deterministic backend steps and interactive browser
 surfaces.
+
+Good fit if you searched for:
+
+- JavaScript plugin SDK for workflow automation
+- TypeScript automation plugins with UI
+- human-in-the-loop workflow plugin
+- JSON-RPC plugin runtime for AI automation
 
 Official links: [flyto2.com](https://flyto2.com) ·
 [Docs](https://docs.flyto2.com) ·

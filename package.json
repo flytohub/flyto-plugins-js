@@ -1,7 +1,7 @@
 {
   "name": "flyto-plugins-js",
   "private": true,
-  "description": "Flyto2 TypeScript and JavaScript plugin SDK with official automation plugins.",
+  "description": "Flyto2 JavaScript and TypeScript plugin SDK for workflow automation, interactive UI steps, and human-in-the-loop AI agents.",
   "homepage": "https://flyto2.com",
   "author": "Flyto2 (https://flyto2.com)",
   "bugs": {
