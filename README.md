@@ -1,11 +1,24 @@
-# flyto-plugins-js
+# Flyto2 Plugins JS
 
-[![npm: plugin-sdk](https://img.shields.io/npm/v/@flyto2/plugin-sdk?label=%40flyto%2Fplugin-sdk)](https://www.npmjs.com/package/@flyto2/plugin-sdk)
+[![npm: plugin-sdk](https://img.shields.io/npm/v/@flyto2/plugin-sdk?label=%40flyto2%2Fplugin-sdk)](https://www.npmjs.com/package/@flyto2/plugin-sdk)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Website](https://img.shields.io/badge/website-flyto2.com-8B5CF6)](https://flyto2.com)
 [![Docs](https://img.shields.io/badge/docs-docs.flyto2.com-06B6D4)](https://docs.flyto2.com)
 
-Interactive plugin system for Flyto2 workflows. Plugins run as Node.js processes, communicate with flyto-core via JSON-RPC, and can serve interactive UIs (forms, tools, approvals) that appear inline during workflow execution.
+Interactive plugin SDK for Flyto2 workflows. Plugins run as Node.js processes,
+communicate with Flyto2 Core over JSON-RPC, and can serve inline UI for forms,
+tools, approvals, image editing, Slack actions, and human-in-the-loop workflow
+steps.
+
+Use it to build JavaScript and TypeScript automation plugins for Flyto2 Core,
+Flyto2 Cloud, self-hosted workflows, MCP-adjacent tools, and workflow UIs that
+need a clean bridge between deterministic backend steps and interactive browser
+surfaces.
+
+Official links: [flyto2.com](https://flyto2.com) ·
+[Docs](https://docs.flyto2.com) ·
+[npm package](https://www.npmjs.com/package/@flyto2/plugin-sdk) ·
+[flyto-core](https://github.com/flytohub/flyto-core)
 
 ## Architecture
 
@@ -46,6 +59,8 @@ npm run build
 # Run tests
 npm test
 ```
+
+## Usage
 
 ### Create a Plugin
 
