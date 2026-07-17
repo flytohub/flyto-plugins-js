@@ -15,7 +15,7 @@
   "files": [
     "src"
   ],
-  "keywords": ["flyto", "design-tokens", "css-variables"],
+  "keywords": ["flyto2", "design-tokens", "plugin-ui", "css-variables", "workflow-automation"],
   "license": "Apache-2.0",
   "homepage": "https://flyto2.com",
   "bugs": { "url": "https://github.com/flytohub/flyto-plugins-js/issues" },

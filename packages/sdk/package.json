@@ -13,11 +13,13 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "flyto",
     "flyto2",
-    "plugin",
+    "plugin-sdk",
     "workflow",
-    "automation"
+    "automation",
+    "workflow-automation",
+    "ai-workflow-automation",
+    "human-in-the-loop"
   ],
   "license": "Apache-2.0",
   "homepage": "https://flyto2.com",

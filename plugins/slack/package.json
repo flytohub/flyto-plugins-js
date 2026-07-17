@@ -9,9 +9,11 @@
     "start": "node dist/index.js"
   },
   "keywords": [
-    "flyto",
+    "flyto2",
     "plugin",
-    "slack"
+    "slack",
+    "workflow-automation",
+    "human-in-the-loop"
   ],
   "license": "Apache-2.0",
   "homepage": "https://flyto2.com",

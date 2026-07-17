@@ -2,6 +2,13 @@
   "name": "@flyto2/plugin-form-builder",
   "version": "0.1.0",
   "description": "Interactive form builder and collector for Flyto2 workflows",
+  "keywords": [
+    "flyto2",
+    "form-builder",
+    "workflow-automation",
+    "human-in-the-loop",
+    "plugin"
+  ],
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
