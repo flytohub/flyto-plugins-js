@@ -88,7 +88,7 @@ describe("Form Builder Plugin", () => {
           ok: true,
           data: {
             submitted: true,
-            values: { name: "Chester", email: "c@flyto.io" },
+            values: { name: "Chester", email: "dev@flyto2.com" },
             metadata: { timestamp: new Date().toISOString() },
           },
         };
