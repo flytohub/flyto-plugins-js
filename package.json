@@ -27,7 +27,8 @@
   "scripts": {
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "verify": "npm run lint && npm run test && npm run build && flyto-index verify . --json"
   },
   "engines": {
     "node": ">=18.0.0"
