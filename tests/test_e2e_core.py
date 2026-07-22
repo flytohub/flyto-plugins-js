@@ -29,6 +29,7 @@ async def send_recv(proc, method, params=None, msg_id=1):
 
 
 async def run_tests():
+    """Run the Core-shaped end-to-end protocol scenario."""
     assert PLUGIN_JS.exists(), f"Build first: {PLUGIN_JS}"
 
     # Spawn plugin — same as flyto-core runtime/process.py does
@@ -61,13 +62,13 @@ async def run_tests():
         # ── Test 2: Invoke echo ──────────────────────────
         res = await send_recv(proc, "invoke", {
             "step": "echo",
-            "input": {"message": "hello flyto"},
+            "input": {"message": "hello flyto2"},
         }, msg_id=2)
 
         result = res["result"]
         assert result["ok"] is True, f"Not ok: {result}"
-        assert result["data"]["echo"] == "hello flyto", f"Wrong echo: {result}"
-        assert result["data"]["reversed"] == "otylf olleh", f"Wrong reverse: {result}"
+        assert result["data"]["echo"] == "hello flyto2", f"Wrong echo: {result}"
+        assert result["data"]["reversed"] == "2otylf olleh", f"Wrong reverse: {result}"
         print("  PASS: invoke echo")
         passed += 1
 
@@ -161,7 +162,7 @@ async def run_tests():
 
 
 if __name__ == "__main__":
-    print("E2E Test: Python (flyto-core) <-> Node.js (@flyto/plugin-sdk)")
+    print("E2E Test: Python (flyto-core) <-> Node.js (@flyto2/plugin-sdk)")
     print("="*50)
     exit_code = asyncio.run(run_tests())
     sys.exit(exit_code)

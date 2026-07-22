@@ -2,18 +2,28 @@
   "name": "@flyto2/plugin-ui-tokens",
   "version": "0.1.0",
   "description": "Design tokens for Flyto2 plugin UIs — CSS variables for colors, spacing, radius, shadows, typography",
+  "type": "module",
   "main": "src/tokens.css",
   "style": "src/tokens.css",
   "exports": {
     ".": "./src/tokens.css",
     "./tokens.css": "./src/tokens.css",
-    "./inject": "./src/inject.js"
+    "./inject": {
+      "types": "./src/inject.d.ts",
+      "default": "./src/inject.js"
+    }
   },
   "scripts": {
-    "build": "echo 'No build needed — plain CSS/JS'"
+    "build": "node --check src/inject.js",
+    "lint": "node --check src/inject.js",
+    "test": "node --test src/*.test.js"
   },
   "files": [
-    "src"
+    "src/tokens.css",
+    "src/inject.js",
+    "src/inject.d.ts",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": ["flyto2", "design-tokens", "plugin-ui", "css-variables", "workflow-automation"],
   "license": "Apache-2.0",
@@ -26,7 +36,10 @@
     "directory": "packages/ui-tokens"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

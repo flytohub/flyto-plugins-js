@@ -48,6 +48,11 @@ Create a new bridge instance.
 
 - `options.origin` — Allowed parent origin for postMessage (default: auto-detect)
 
+Use an exact HTTP(S) origin in hosted iframes. The wildcard fallback exists for
+trusted local pages only. Incoming updates must come from the actual parent
+window and match the configured origin. Theme updates apply only string-valued
+`--flyto-*` custom properties.
+
 ### `bridge.props`
 
 Read-only. Current props passed from the workflow step input.
@@ -72,5 +77,10 @@ Register a callback for theme token updates.
 
 The bridge uses two channels (auto-selected):
 
-1. **HTTP POST** — Plugin SDK's local HTTP server (development)
-2. **postMessage** — iframe ↔ host window (production)
+1. **HTTP POST** — Plugin SDK's local loopback server
+2. **postMessage** — iframe to host window
+
+When the loopback callback fails or returns non-2xx, the bridge falls back to
+parent messaging. Submit data must be an object. See the [UI runtime security
+boundary](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/UI_RUNTIME.md)
+and [generated source API](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/generated/source-api.md).

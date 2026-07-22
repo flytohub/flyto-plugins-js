@@ -1,0 +1,133 @@
+{
+  "$schema": "https://docs.flyto2.com/schemas/documentation-contract-v1.json",
+  "schema_version": 1,
+  "repository": "flyto-plugins-js",
+  "status": "active",
+  "audiences": ["plugin authors", "Core integrators", "frontend engineers", "security reviewers"],
+  "documentation": {
+    "index": "docs/README.md",
+    "architecture": "ARCHITECTURE.md",
+    "state": "STATE.md",
+    "security": "SECURITY.md",
+    "changelog": "CHANGELOG.md",
+    "feature_reference": "docs/FEATURES.md"
+  },
+  "source_areas": [
+    {
+      "id": "plugin-sdk",
+      "description": "TypeScript JSON-RPC plugin process, public types, loopback UI server, compiled output, and protocol-focused tests.",
+      "paths": ["packages/sdk/**"],
+      "documentation": ["docs/SDK_API.md", "docs/generated/source-api.md", "docs/UI_RUNTIME.md", "packages/sdk/README.md"]
+    },
+    {
+      "id": "ui-packages",
+      "description": "Browser iframe bridge, theme-message handling, CSS design tokens, utility classes, and runtime token helpers.",
+      "paths": ["packages/ui-bridge/**", "packages/ui-tokens/**"],
+      "documentation": ["docs/SDK_API.md#ui-bridge-api", "docs/SDK_API.md#ui-token-api", "docs/generated/source-api.md", "docs/generated/ui-tokens.md", "docs/UI_RUNTIME.md"]
+    },
+    {
+      "id": "reference-plugins",
+      "description": "Slack, form and approval, and image-crop reference plugins with manifests, TypeScript handlers, browser UIs, builds, and tests.",
+      "paths": ["plugins/**"],
+      "documentation": ["docs/PLUGINS.md", "docs/generated/plugin-contracts.md", "docs/FORM_FIELDS.md", "PLUGIN_SPEC.md", "docs/FEATURES.md"]
+    },
+    {
+      "id": "workspace-quality",
+      "description": "Workspace orchestration, Python process interoperability tests, contribution rules, and continuous validation and publication workflows.",
+      "paths": ["package.json", "package-lock.json", "tests/**", ".github/workflows/**"],
+      "documentation": ["README.md#testing", "README.md#configuration", "docs/FEATURES.md#test-and-publish-automation", "docs/RELEASE.md", ".github/workflows/README.md", "CONTRIBUTING.md"]
+    }
+  ],
+  "feature_surfaces": [
+    {
+      "id": "json-rpc-runtime",
+      "title": "JSON-RPC plugin runtime",
+      "kind": "library",
+      "status": "active",
+      "description": "Registers headless and interactive handlers and dispatches handshake, invoke, ping, shutdown, result, error, and notification messages over stdio.",
+      "source": ["packages/sdk/src/plugin.ts", "packages/sdk/src/types.ts", "packages/sdk/src/index.ts"],
+      "documentation": ["docs/FEATURES.md#json-rpc-plugin-runtime", "docs/SDK_API.md", "docs/generated/source-api.md"],
+      "tests": ["packages/sdk/src/plugin.test.ts", "tests/test_plugin_runtime.py", "tests/test_e2e_core.py"]
+    },
+    {
+      "id": "ui-server",
+      "title": "Interactive UI server",
+      "kind": "library",
+      "status": "active",
+      "description": "Serves confined plugin UI files on loopback, injects bridge and theme assets, and resolves capability-bound submit or cancel callbacks.",
+      "source": ["packages/sdk/src/ui-server.ts"],
+      "documentation": ["docs/FEATURES.md#interactive-ui-runtime", "docs/SDK_API.md#uiserver", "docs/generated/source-api.md", "docs/UI_RUNTIME.md"],
+      "tests": ["packages/sdk/src/ui-server.test.ts"]
+    },
+    {
+      "id": "ui-bridge",
+      "title": "Iframe UI bridge",
+      "kind": "library",
+      "status": "active",
+      "description": "Exposes props, submission, cancellation, and theme updates through loopback callbacks or parent-window messaging with source and optional origin checks.",
+      "source": ["packages/ui-bridge/src/**"],
+      "documentation": ["docs/FEATURES.md#ui-bridge", "docs/SDK_API.md#ui-bridge-api", "docs/UI_RUNTIME.md#messaging-surface"],
+      "tests": ["packages/ui-bridge/src/bridge.test.js"]
+    },
+    {
+      "id": "ui-tokens",
+      "title": "Plugin UI tokens",
+      "kind": "library",
+      "status": "active",
+      "description": "Publishes Flyto2 CSS variables, utility classes, and JavaScript helpers for applying and reading host theme overrides.",
+      "source": ["packages/ui-tokens/src/**"],
+      "documentation": ["docs/FEATURES.md#ui-tokens", "docs/SDK_API.md#ui-token-api", "docs/generated/ui-tokens.md", "packages/ui-tokens/README.md"],
+      "tests": ["packages/ui-tokens/src/inject.test.js"]
+    },
+    {
+      "id": "manifest",
+      "title": "Plugin manifest contract",
+      "kind": "schema",
+      "status": "active",
+      "description": "Defines plugin identity, runtime compatibility, step schemas, connection rules, UI presentation, and required secret names in YAML.",
+      "source": ["PLUGIN_SPEC.md", "plugins/*/plugin.yaml"],
+      "documentation": ["docs/FEATURES.md#manifest-contract", "PLUGIN_SPEC.md", "docs/PLUGINS.md#manifest-parity", "docs/generated/plugin-contracts.md"],
+      "verification": ["npm run contracts", "npm run docs"]
+    },
+    {
+      "id": "slack-plugin",
+      "title": "Slack reference plugin",
+      "kind": "workflow",
+      "status": "active",
+      "description": "Demonstrates context-secret resolution, external message creation, and public-channel discovery through the Slack Web API.",
+      "source": ["plugins/slack/**"],
+      "documentation": ["docs/FEATURES.md#slack-reference-plugin", "docs/PLUGINS.md#slack"],
+      "tests": ["plugins/slack/src/index.test.ts"]
+    },
+    {
+      "id": "form-plugin",
+      "title": "Form and approval plugin",
+      "kind": "ui",
+      "status": "active",
+      "description": "Collects dynamic structured input or an approval decision through local modal interfaces with explicit cancellation behavior.",
+      "source": ["plugins/form-builder/**"],
+      "documentation": ["docs/FEATURES.md#form-and-approval-plugin", "docs/PLUGINS.md#form-builder", "docs/FORM_FIELDS.md", "docs/generated/plugin-contracts.md#form-builder"],
+      "tests": ["plugins/form-builder/src/index.test.ts"]
+    },
+    {
+      "id": "image-crop-plugin",
+      "title": "Image crop plugin",
+      "kind": "ui",
+      "status": "active",
+      "description": "Provides an interactive browser crop workflow that returns encoded image data, crop geometry, and original dimensions.",
+      "source": ["plugins/image-crop/**"],
+      "documentation": ["docs/FEATURES.md#image-crop-plugin", "docs/PLUGINS.md#image-crop", "docs/generated/plugin-contracts.md#image-crop"],
+      "tests": ["plugins/image-crop/src/index.test.ts"]
+    },
+    {
+      "id": "quality-publication",
+      "title": "Test and publish automation",
+      "kind": "workflow",
+      "status": "active",
+      "description": "Builds and tests all workspaces, exercises process interoperability, runs security gates, and publishes tagged public packages with provenance.",
+      "source": ["package.json", "tests/**", ".github/workflows/**"],
+      "documentation": ["docs/FEATURES.md#test-and-publish-automation", "README.md#testing", "README.md#configuration", "docs/RELEASE.md", ".github/workflows/README.md"],
+      "verification": ["npm run verify", "npm audit --omit=dev --audit-level=high"]
+    }
+  ]
+}

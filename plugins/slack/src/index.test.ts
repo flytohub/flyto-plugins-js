@@ -1,87 +1,44 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
-/**
- * Tests for Slack plugin step handlers.
- *
- * Tests validation and error paths only — actual Slack API calls
- * require credentials and are tested in integration tests.
- */
+/** Tests the real Slack plugin's offline registration and validation paths. */
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createPlugin } from "@flyto2/plugin-sdk";
-import type { JsonRpcRequest, JsonRpcResponse } from "@flyto2/plugin-sdk";
+import type { JsonRpcRequest, JsonRpcResponse, StepContext } from "@flyto2/plugin-sdk";
+import { listChannels, plugin, sendMessage } from "./index.js";
 
-function getHandler(plugin: ReturnType<typeof createPlugin>) {
-  return (req: JsonRpcRequest) =>
-    (plugin as unknown as { handleRequest(r: JsonRpcRequest): Promise<JsonRpcResponse | null> })
-      .handleRequest(req);
+/** Access private dispatch only to verify the registered runtime contract. */
+function getHandler() {
+  return (request: JsonRpcRequest) =>
+    (plugin as unknown as {
+      handleRequest(value: JsonRpcRequest): Promise<JsonRpcResponse | null>;
+    }).handleRequest(request);
 }
 
+const context: StepContext = { raw: {} };
+
 describe("Slack Plugin", () => {
-  // We can't test the actual Slack API without credentials,
-  // so we test the plugin's registration and parameter validation.
-
-  it("should register send_message and list_channels steps", async () => {
-    // Import the plugin module to trigger step registration
-    // Since the plugin calls plugin.start() which listens on stdin,
-    // we test via a fresh plugin instance instead.
-    const plugin = createPlugin({ id: "test/slack", version: "0.1.0" });
-
-    // Register steps with validation-only handlers
-    plugin.step("send_message", async (input) => {
-      const channel = input.channel as string;
-      const message = input.message as string;
-      if (!channel || !message) {
-        return { ok: false, error: { code: "INVALID_PARAMS", message: "Both 'channel' and 'message' are required" } };
-      }
-      return { ok: true, data: { ts: "1234.5678", channel } };
+  it("registers send_message and list_channels", async () => {
+    const response = await getHandler()({
+      jsonrpc: "2.0",
+      method: "handshake",
+      params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" },
+      id: 1,
     });
+    assert.deepEqual((response?.result as { steps: string[] }).steps, ["send_message", "list_channels"]);
+  });
 
-    plugin.step("list_channels", async (input) => {
-      return { ok: true, data: { channels: [] } };
-    });
+  it("validates message inputs before resolving credentials", async () => {
+    const result = await sendMessage({ channel: "", message: "" }, context);
+    assert.equal(result.error?.code, "INVALID_PARAMS");
+    assert.equal((await sendMessage({ channel: 7, message: "hello" }, context)).error?.code, "INVALID_PARAMS");
+    assert.equal((await sendMessage({ channel: "C1", message: "hello", thread_ts: 7 }, context)).error?.code, "INVALID_PARAMS");
+  });
 
-    const handle = getHandler(plugin);
-
-    // Handshake should list both steps
-    const hs = await handle({
-      jsonrpc: "2.0", method: "handshake",
-      params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" }, id: 1,
-    });
-    assert.ok(hs);
-    const steps = (hs.result as { steps: string[] }).steps;
-    assert.ok(steps.includes("send_message"));
-    assert.ok(steps.includes("list_channels"));
-
-    // send_message without required params should fail
-    const res = await handle({
-      jsonrpc: "2.0", method: "invoke",
-      params: { step: "send_message", input: {} }, id: 2,
-    });
-    assert.ok(res);
-    const result = res.result as { ok: boolean; error: { code: string } };
-    assert.equal(result.ok, false);
-    assert.equal(result.error.code, "INVALID_PARAMS");
-
-    // send_message with valid params should succeed
-    const res2 = await handle({
-      jsonrpc: "2.0", method: "invoke",
-      params: { step: "send_message", input: { channel: "#general", message: "hello" } }, id: 3,
-    });
-    assert.ok(res2);
-    const result2 = res2.result as { ok: boolean; data: { ts: string; channel: string } };
-    assert.equal(result2.ok, true);
-    assert.equal(result2.data.channel, "#general");
-
-    // list_channels should return empty array
-    const res3 = await handle({
-      jsonrpc: "2.0", method: "invoke",
-      params: { step: "list_channels", input: {} }, id: 4,
-    });
-    assert.ok(res3);
-    const result3 = res3.result as { ok: boolean; data: { channels: unknown[] } };
-    assert.equal(result3.ok, true);
-    assert.ok(Array.isArray(result3.data.channels));
+  it("enforces Slack's recommended one-page channel limit", async () => {
+    assert.equal((await listChannels({ limit: 0 }, context)).error?.code, "INVALID_PARAMS");
+    assert.equal((await listChannels({ limit: 201 }, context)).error?.code, "INVALID_PARAMS");
+    assert.equal((await listChannels({ limit: 10.5 }, context)).error?.code, "INVALID_PARAMS");
+    assert.equal((await listChannels({ limit: "10" }, context)).error?.code, "INVALID_PARAMS");
   });
 });

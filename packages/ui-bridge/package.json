@@ -10,13 +10,23 @@
       "types": "./src/bridge.d.ts",
       "default": "./src/bridge.js"
     },
-    "./auto": "./src/auto.js"
+    "./auto": {
+      "types": "./src/auto.d.ts",
+      "default": "./src/auto.js"
+    }
   },
   "scripts": {
-    "build": "echo 'No build needed — plain JS'"
+    "build": "node --check src/bridge.js && node --check src/auto.js",
+    "lint": "node --check src/bridge.js && node --check src/auto.js",
+    "test": "node --test src/*.test.js"
   },
   "files": [
-    "src"
+    "src/bridge.js",
+    "src/bridge.d.ts",
+    "src/auto.js",
+    "src/auto.d.ts",
+    "README.md",
+    "LICENSE"
   ],
   "keywords": ["flyto2", "plugin-ui", "plugin-bridge", "workflow-automation", "iframe"],
   "license": "Apache-2.0",
@@ -29,7 +39,10 @@
     "directory": "packages/ui-bridge"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

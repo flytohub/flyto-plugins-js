@@ -10,8 +10,18 @@
     "plugin"
   ],
   "main": "dist/index.js",
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "plugin.yaml",
+    "ui",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "test": "node --test dist/**/*.test.js",
     "start": "node dist/index.js"
   },
@@ -31,7 +41,10 @@
     "directory": "plugins/image-crop"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }

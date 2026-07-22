@@ -1,15 +1,15 @@
 # Project
 
-`flyto-plugins-js` is a Flyto2 workspace repo.
+`flyto-plugins-js` is the JavaScript/TypeScript SDK and reference-plugin
+workspace for extending Flyto2 Core with headless and human-in-the-loop steps.
 
-Product lines:
+Owned surfaces are the JSON-RPC SDK, loopback UI server, iframe bridge, UI
+tokens, plugin manifest specification, Slack reference integration, dynamic
+form/approval UI, and image-crop UI.
 
-- cloud_apps_automation
-- data
-- zero_person_agent
+Users are plugin authors, Flyto2 Core and Flyto2 Cloud integrators, workflow designers, and
+security reviewers. This repository does not own Core process isolation,
+authorization, tenant policy, secret storage, marketplace review, or hosted UI
+deployment.
 
-Status: active
-
-Core dependency: connector SDK
-
-Health target: C
+Status: active open-source SDK. Health target: B.

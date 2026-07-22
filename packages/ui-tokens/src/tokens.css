@@ -8,7 +8,7 @@
  * so the host app can override them for theme sync.
  *
  * Usage:
- *   @import '@flyto/plugin-ui-tokens';
+ *   @import '@flyto2/plugin-ui-tokens';
  *
  *   .my-button { background: var(--flyto-primary); }
  */

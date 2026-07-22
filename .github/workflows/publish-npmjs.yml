@@ -1,43 +1,40 @@
 name: Publish to npmjs.com (public)
 
-# Dual-publish: GitHub Packages (publish.yml) handles internal/private
-# distribution, this one publishes the same tag to npmjs.com so the
-# packages get the npmjs.com SEO presence + free DR-92 backlink.
-#
-# Setup needed once:
-#   1. Create the @flyto scope on npmjs.com
-#   2. Generate an automation token at npmjs.com/settings/<user>/tokens
-#   3. Add it as repo secret NPM_TOKEN
+# Each public package must trust this exact GitHub workflow on npmjs.com.
+# See docs/RELEASE.md. No long-lived npm token is used.
 
 on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch:
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write   # required by --provenance
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: '20'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
           scope: '@flyto2'
+          package-manager-cache: false
 
-      - run: npm ci
-      - run: npm run build --workspaces --if-present
-      - name: Run tests (block publish on failure)
-        run: npm test --workspaces --if-present
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          python -m pip install "git+https://github.com/flytohub/flyto-indexer.git@8e2e51d5e9e91aa83ee51c38cf99276babf4cdb4"
+
+      - name: Verify release contents
+        run: npm run verify
 
       - name: Publish all non-private workspaces (public)
-        # `--access public` is required for first-time publish of a
-        # scoped @flyto2/* package on npmjs.com (free plan).
         run: npm publish --workspaces --access public --provenance
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

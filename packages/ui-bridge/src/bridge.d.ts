@@ -1,5 +1,6 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
+/** Public browser bridge exposed to a plugin UI. */
 export interface FlytoUIBridge {
   /** Current props from the host */
   readonly props: Record<string, unknown>;
@@ -17,6 +18,7 @@ export interface FlytoUIBridge {
   onTheme(handler: (tokens: Record<string, string>) => void): void;
 }
 
+/** Security options used when creating a browser bridge. */
 export interface BridgeOptions {
   /** Allowed parent origin for postMessage (default: '*') */
   origin?: string;

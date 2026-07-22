@@ -1,201 +1,129 @@
 // Copyright 2026 Flyto2. Licensed under Apache-2.0. See LICENSE.
 
-/**
- * Tests for Form Builder plugin step handlers.
- *
- * Tests parameter validation and step registration for both
- * collect_form and approval_form steps.
- */
+/** Tests the real Form Builder handlers and registration contract. */
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { createPlugin } from "@flyto2/plugin-sdk";
-import type { JsonRpcRequest, JsonRpcResponse, StepResult } from "@flyto2/plugin-sdk";
+import type { JsonRpcRequest, JsonRpcResponse, UIStepContext } from "@flyto2/plugin-sdk";
+import { approvalForm, collectForm, plugin } from "./index.js";
 
-function getHandler(plugin: ReturnType<typeof createPlugin>) {
-  return (req: JsonRpcRequest) =>
-    (plugin as unknown as { handleRequest(r: JsonRpcRequest): Promise<JsonRpcResponse | null> })
-      .handleRequest(req);
+/** Access private dispatch only to verify the registered runtime contract. */
+function getHandler() {
+  return (request: JsonRpcRequest) =>
+    (plugin as unknown as {
+      handleRequest(value: JsonRpcRequest): Promise<JsonRpcResponse | null>;
+    }).handleRequest(request);
+}
+
+/** Build a UI context around one deterministic test response. */
+function uiContext(
+  result: { submitted: boolean; data: Record<string, unknown> },
+): UIStepContext {
+  return {
+    raw: {},
+    waitForUI: async () => result,
+  };
 }
 
 describe("Form Builder Plugin", () => {
-  describe("collect_form", () => {
-    it("should register as a UI step in handshake", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
+  it("registers both manifest step IDs", async () => {
+    const response = await getHandler()({
+      jsonrpc: "2.0",
+      method: "handshake",
+      params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" },
+      id: 1,
+    });
+    const result = response?.result as { steps: string[] };
+    assert.deepEqual(result.steps, ["collect_form", "approval_form"]);
+  });
 
-      plugin.uiStep(
-        "collect_form",
-        { page: "ui", type: "dialog", width: 720, height: 700 },
-        async (input, ctx) => ({ ok: true, data: {} })
+  describe("collectForm", () => {
+    it("rejects missing title, fields, and unsupported mode", async () => {
+      const ctx = uiContext({ submitted: false, data: {} });
+      assert.equal((await collectForm({}, ctx)).error?.code, "INVALID_PARAMS");
+      assert.equal(
+        (await collectForm({ title: "Survey", fields: [{}], mode: "pages" }, ctx)).error?.code,
+        "INVALID_PARAMS",
       );
-
-      const handle = getHandler(plugin);
-      const hs = await handle({
-        jsonrpc: "2.0", method: "handshake",
-        params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" }, id: 1,
-      });
-
-      assert.ok(hs);
-      const result = hs.result as { steps: string[]; ui: Record<string, unknown> };
-      assert.ok(result.steps.includes("collect_form"));
-      assert.ok(result.ui);
+      assert.equal(
+        (await collectForm({ title: 7, fields: [{ id: "name", type: "text" }] }, ctx)).error?.code,
+        "INVALID_PARAMS",
+      );
+      assert.equal(
+        (await collectForm({ title: "Survey", fields: [
+          { id: "name", type: "text" }, { id: "name", type: "text" },
+        ] }, ctx)).error?.code,
+        "INVALID_PARAMS",
+      );
+      assert.equal(
+        (await collectForm({ title: "Survey", fields: [{ id: "choice", type: "select" }] }, ctx)).error?.code,
+        "INVALID_PARAMS",
+      );
     });
 
-    it("should return error when fields is empty", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
-
-      plugin.step("collect_form", async (input) => {
-        const fields = input.fields as unknown[];
-        if (!fields || !Array.isArray(fields) || fields.length === 0) {
-          return {
-            ok: false,
-            error: { code: "INVALID_PARAMS", message: "'fields' must be a non-empty array" },
-          };
-        }
-        return { ok: true, data: {} };
+    it("normalizes submitted values and metadata", async () => {
+      const result = await collectForm(
+        { title: "Survey", fields: [{ id: "name", type: "text" }] },
+        uiContext({ submitted: true, data: { values: { name: "Ada" }, metadata: { duration_ms: 4 } } }),
+      );
+      assert.deepEqual(result.data, {
+        submitted: true,
+        values: { name: "Ada" },
+        metadata: { duration_ms: 4 },
       });
-
-      const handle = getHandler(plugin);
-
-      // No fields
-      const res = await handle({
-        jsonrpc: "2.0", method: "invoke",
-        params: { step: "collect_form", input: { title: "Test" } }, id: 2,
-      });
-      assert.ok(res);
-      assert.equal((res.result as StepResult).ok, false);
-      assert.equal((res.result as StepResult).error!.code, "INVALID_PARAMS");
-
-      // Empty fields array
-      const res2 = await handle({
-        jsonrpc: "2.0", method: "invoke",
-        params: { step: "collect_form", input: { title: "Test", fields: [] } }, id: 3,
-      });
-      assert.ok(res2);
-      assert.equal((res2.result as StepResult).ok, false);
     });
 
-    it("should accept valid fields and return submitted data", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
-
-      plugin.step("collect_form", async (input) => {
-        const fields = input.fields as unknown[];
-        if (!fields || !Array.isArray(fields) || fields.length === 0) {
-          return { ok: false, error: { code: "INVALID_PARAMS", message: "fields required" } };
-        }
-        // Simulate submitted result (in real flow, waitForUI resolves this)
-        return {
-          ok: true,
-          data: {
-            submitted: true,
-            values: { name: "Chester", email: "dev@flyto2.com" },
-            metadata: { timestamp: new Date().toISOString() },
-          },
-        };
-      });
-
-      const handle = getHandler(plugin);
-      const res = await handle({
-        jsonrpc: "2.0", method: "invoke",
-        params: {
-          step: "collect_form",
-          input: {
-            title: "User Info",
-            fields: [
-              { id: "name", type: "text", label: "Name", required: true },
-              { id: "email", type: "email", label: "Email", required: true },
-            ],
-          },
-        },
-        id: 4,
-      });
-
-      assert.ok(res);
-      const result = res.result as { ok: boolean; data: { submitted: boolean; values: Record<string, string> } };
-      assert.equal(result.ok, true);
-      assert.equal(result.data.submitted, true);
-      assert.equal(result.data.values.name, "Chester");
+    it("returns an explicit successful cancellation", async () => {
+      const result = await collectForm(
+        { title: "Survey", fields: [{ id: "name", type: "text" }] },
+        uiContext({ submitted: false, data: {} }),
+      );
+      assert.deepEqual(result.data, { submitted: false, values: {}, metadata: { cancelled: true } });
     });
   });
 
-  describe("approval_form", () => {
-    it("should register as a UI step", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
-
-      plugin.uiStep(
-        "approval_form",
-        { page: "ui", type: "dialog", width: 640, height: 600 },
-        async (input, ctx) => ({ ok: true, data: {} })
+  describe("approvalForm", () => {
+    it("requires a title and a valid decision", async () => {
+      assert.equal(
+        (await approvalForm({}, uiContext({ submitted: false, data: {} }))).error?.code,
+        "INVALID_PARAMS",
       );
-
-      const handle = getHandler(plugin);
-      const hs = await handle({
-        jsonrpc: "2.0", method: "handshake",
-        params: { protocolVersion: "0.1.0", pluginId: "test", executionId: "e1" }, id: 1,
-      });
-
-      const result = hs!.result as { steps: string[] };
-      assert.ok(result.steps.includes("approval_form"));
+      assert.equal(
+        (await approvalForm(
+          { title: "Deploy?" },
+          uiContext({ submitted: true, data: { decision: "maybe" } }),
+        )).error?.code,
+        "INVALID_UI_RESULT",
+      );
+      assert.equal(
+        (await approvalForm(
+          { title: "Deploy?", context: [] },
+          uiContext({ submitted: false, data: {} }),
+        )).error?.code,
+        "INVALID_PARAMS",
+      );
     });
 
-    it("should return approved decision with comment", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
-
-      plugin.step("approval_form", async (input) => {
-        return {
-          ok: true,
-          data: {
-            decision: "approved",
-            comment: "Looks good",
-            values: {},
-          },
-        };
-      });
-
-      const handle = getHandler(plugin);
-      const res = await handle({
-        jsonrpc: "2.0", method: "invoke",
-        params: {
-          step: "approval_form",
-          input: {
-            title: "Deploy to production?",
-            context: { version: "2.1.0", env: "production" },
-          },
-        },
-        id: 2,
-      });
-
-      assert.ok(res);
-      const result = res.result as { ok: boolean; data: { decision: string; comment: string } };
-      assert.equal(result.ok, true);
-      assert.equal(result.data.decision, "approved");
-      assert.equal(result.data.comment, "Looks good");
+    it("enforces required reviewer comments", async () => {
+      const result = await approvalForm(
+        { title: "Deploy?", require_comment: true },
+        uiContext({ submitted: true, data: { decision: "approved", comment: "" } }),
+      );
+      assert.equal(result.error?.code, "INVALID_UI_RESULT");
     });
 
-    it("should return rejected decision", async () => {
-      const plugin = createPlugin({ id: "test/form-builder", version: "0.1.0" });
+    it("returns approved and closed-dialog decisions", async () => {
+      const approved = await approvalForm(
+        { title: "Deploy?", require_comment: true },
+        uiContext({ submitted: true, data: { decision: "approved", comment: "Reviewed" } }),
+      );
+      assert.deepEqual(approved.data, { decision: "approved", comment: "Reviewed", values: {} });
 
-      plugin.step("approval_form", async (input) => {
-        return {
-          ok: true,
-          data: {
-            decision: "rejected",
-            comment: "Not ready",
-            values: {},
-          },
-        };
-      });
-
-      const handle = getHandler(plugin);
-      const res = await handle({
-        jsonrpc: "2.0", method: "invoke",
-        params: { step: "approval_form", input: { title: "Approve?" } }, id: 3,
-      });
-
-      assert.ok(res);
-      const result = res.result as { ok: boolean; data: { decision: string } };
-      assert.equal(result.ok, true);
-      assert.equal(result.data.decision, "rejected");
+      const closed = await approvalForm(
+        { title: "Deploy?" },
+        uiContext({ submitted: false, data: {} }),
+      );
+      assert.equal(closed.data?.decision, "rejected");
     });
   });
 });

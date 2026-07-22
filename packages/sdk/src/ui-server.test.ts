@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as vm from "node:vm";
 import { UIServer } from "./ui-server.js";
 
 /** Create a temp directory with an index.html */
@@ -21,11 +22,15 @@ function createTempUI(html: string = "<html><head></head><body>Hello</body></htm
 describe("UIServer", () => {
   let server: UIServer;
   let tmpDir: string;
+  let outsideDir: string;
 
   afterEach(async () => {
     if (server) await server.stop();
     if (tmpDir && fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true });
+    }
+    if (outsideDir && fs.existsSync(outsideDir)) {
+      fs.rmSync(outsideDir, { recursive: true });
     }
   });
 
@@ -39,7 +44,11 @@ describe("UIServer", () => {
       assert.equal(server.getPort(), port);
 
       await server.stop();
-      assert.equal(server.getPort(), port); // port is retained after stop
+      assert.equal(server.getPort(), 0);
+    });
+
+    it("should reject missing UI roots", () => {
+      assert.throws(() => new UIServer({ uiRoot: "/definitely/missing/flyto2-ui" }), /existing directory/);
     });
   });
 
@@ -96,6 +105,19 @@ describe("UIServer", () => {
       // Should either 403 or serve index.html (SPA fallback), not the actual file
       const text = await res.text();
       assert.ok(!text.includes("root:"));
+    });
+
+    it("should prevent symlinks from escaping the real UI root", async () => {
+      tmpDir = createTempUI();
+      outsideDir = fs.mkdtempSync(path.join(os.tmpdir(), "flyto-ui-outside-"));
+      fs.writeFileSync(path.join(outsideDir, "secret.txt"), "outside-secret");
+      fs.symlinkSync(path.join(outsideDir, "secret.txt"), path.join(tmpDir, "linked.txt"));
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/linked.txt`);
+      assert.equal(res.status, 403);
+      assert.ok(!(await res.text()).includes("outside-secret"));
     });
   });
 
@@ -165,16 +187,91 @@ describe("UIServer", () => {
         "payload `<` was not unicode-escaped",
       );
     });
+
+    it("should safely serialize props containing quotes and closing script tags", async () => {
+      tmpDir = createTempUI("<html><head></head><body>content</body></html>");
+      server = new UIServer({ uiRoot: tmpDir });
+      await server.start();
+      const payload = { value: "'</script><img src=x onerror=alert(1)>" };
+      const url = server.buildUIUrl("index.html", "props-test", payload);
+
+      const res = await fetch(url);
+      assert.equal(res.status, 200);
+      const html = await res.text();
+      const propsLine = html.split("\n").find((line) => line.includes("const PROPS ="));
+
+      assert.ok(propsLine, "PROPS line missing from injected script");
+      assert.ok(!propsLine!.includes("</script>"), "closing-script sequence survived in props");
+      assert.ok(!propsLine!.includes("<img"), "HTML tag survived in props");
+      assert.ok(propsLine!.includes("JSON.parse(decodeURIComponent("));
+    });
+
+    it("should enforce the injected bridge data and theme contract", async () => {
+      tmpDir = createTempUI("<html><head></head><body>content</body></html>");
+      server = new UIServer({ uiRoot: tmpDir });
+      await server.start();
+      const html = await (await fetch(server.buildUIUrl("index.html", "bridge-contract"))).text();
+      const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+      assert.ok(script, "injected bridge script missing");
+
+      const listeners: Record<string, (event: Record<string, unknown>) => void> = {};
+      const posted: unknown[][] = [];
+      const styles: Array<[string, string]> = [];
+      const parent = { postMessage: (...args: unknown[]) => posted.push(args) };
+      const windowObject: Record<string, unknown> = {
+        parent,
+        addEventListener: (name: string, handler: (event: Record<string, unknown>) => void) => {
+          listeners[name] = handler;
+        },
+      };
+      const sandbox = {
+        window: windowObject,
+        document: {
+          documentElement: {
+            style: { setProperty: (key: string, value: string) => styles.push([key, value]) },
+          },
+        },
+        fetch: async () => ({ ok: false, status: 503 }),
+        JSON,
+        Object,
+        Array,
+        Error,
+        TypeError,
+        decodeURIComponent,
+      };
+      vm.runInNewContext(script, sandbox);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      const bridge = windowObject.flyto as {
+        submit: (data: unknown) => void;
+        onTheme: (handler: (tokens: Record<string, string>) => void) => void;
+      };
+      assert.throws(() => bridge.submit(null), /must be an object/);
+      const themeUpdates: Array<Record<string, string>> = [];
+      bridge.onTheme((tokens) => themeUpdates.push(tokens));
+      listeners.message({
+        source: parent,
+        data: "flyto-plugin:" + JSON.stringify({
+          type: "theme",
+          data: { "--flyto-primary": "#123456", color: "red", "--flyto-bad": 7 },
+        }),
+      });
+      assert.deepEqual(styles, [["--flyto-primary", "#123456"]]);
+      assert.equal(JSON.stringify(themeUpdates), JSON.stringify([{ "--flyto-primary": "#123456" }]));
+      assert.ok(posted.length >= 1, "non-2xx callback should fall back to parent messaging");
+    });
   });
 
   describe("CORS", () => {
-    it("should include CORS headers", async () => {
+    it("should echo only the same loopback origin", async () => {
       tmpDir = createTempUI();
       server = new UIServer({ uiRoot: tmpDir });
       const port = await server.start();
 
-      const res = await fetch(`http://127.0.0.1:${port}/`);
-      assert.equal(res.headers.get("access-control-allow-origin"), "*");
+      const origin = `http://127.0.0.1:${port}`;
+      const res = await fetch(`${origin}/`, { headers: { Origin: origin } });
+      assert.equal(res.headers.get("access-control-allow-origin"), origin);
+      assert.equal(res.headers.get("x-content-type-options"), "nosniff");
     });
 
     it("should handle OPTIONS preflight", async () => {
@@ -184,6 +281,19 @@ describe("UIServer", () => {
 
       const res = await fetch(`http://127.0.0.1:${port}/`, { method: "OPTIONS" });
       assert.equal(res.status, 204);
+    });
+
+    it("should reject a cross-origin preflight", async () => {
+      tmpDir = createTempUI();
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+
+      const res = await fetch(`http://127.0.0.1:${port}/`, {
+        method: "OPTIONS",
+        headers: { Origin: "https://attacker.example" },
+      });
+      assert.equal(res.status, 403);
+      assert.equal(res.headers.get("access-control-allow-origin"), null);
     });
   });
 
@@ -212,6 +322,50 @@ describe("UIServer", () => {
       const result = await waitPromise;
       assert.equal(result.submitted, true);
       assert.equal(result.data.croppedUrl, "data:image/png;base64,abc");
+    });
+
+    it("should reject unknown IDs, invalid types, and non-JSON bodies", async () => {
+      tmpDir = createTempUI();
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+      const endpoint = `http://127.0.0.1:${port}/__flyto_callback`;
+
+      const unknown = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "cancel", requestId: "missing" }),
+      });
+      assert.equal(unknown.status, 404);
+
+      const invalidType = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "ready", requestId: "missing" }),
+      });
+      assert.equal(invalidType.status, 400);
+
+      const wrongContentType = await fetch(endpoint, { method: "POST", body: "{}" });
+      assert.equal(wrongContentType.status, 415);
+    });
+
+    it("should reject duplicate request IDs and invalid timeouts", async () => {
+      tmpDir = createTempUI();
+      server = new UIServer({ uiRoot: tmpDir });
+      const port = await server.start();
+      const first = server.waitForUI({ requestId: "duplicate", timeoutMs: 5_000 });
+
+      assert.throws(
+        () => server.waitForUI({ requestId: "duplicate", timeoutMs: 5_000 }),
+        /already pending/,
+      );
+      assert.throws(() => server.waitForUI({ requestId: "bad", timeoutMs: 0 }), /positive finite/);
+
+      await fetch(`http://127.0.0.1:${port}/__flyto_callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "cancel", requestId: "duplicate" }),
+      });
+      await first;
     });
 
     it("should resolve waitForUI on cancel callback", async () => {
@@ -250,11 +404,18 @@ describe("UIServer", () => {
       server = new UIServer({ uiRoot: tmpDir });
       const port = await server.start();
 
-      const url = server.buildUIUrl("index.html", "req-123", { foo: "bar" });
-      assert.ok(url.includes(`http://127.0.0.1:${port}/index.html`));
-      assert.ok(url.includes("__flyto_port="));
-      assert.ok(url.includes("__flyto_req=req-123"));
-      assert.ok(url.includes("__flyto_props="));
+      const url = new URL(server.buildUIUrl("index page.html", "req&=123", { foo: "100% ready" }));
+      assert.equal(url.origin, `http://127.0.0.1:${port}`);
+      assert.equal(url.pathname, "/index%20page.html");
+      assert.equal(url.searchParams.get("__flyto_port"), String(port));
+      assert.equal(url.searchParams.get("__flyto_req"), "req&=123");
+      assert.deepEqual(JSON.parse(url.searchParams.get("__flyto_props")!), { foo: "100% ready" });
+    });
+
+    it("should require the server to start before URL construction", () => {
+      tmpDir = createTempUI();
+      server = new UIServer({ uiRoot: tmpDir });
+      assert.throws(() => server.buildUIUrl("index.html", "req"), /must be started/);
     });
   });
 });

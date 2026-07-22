@@ -32,6 +32,11 @@ plugin.uiStep('configure',
 plugin.start(); // Listen on stdin for JSON-RPC messages
 ```
 
+The runtime ID must use `vendor/name`, versions must be semantic versions, and
+step IDs use letters, numbers, underscores, dots, or hyphens. Duplicate
+registrations and non-callable handlers throw instead of silently replacing or
+deferring an invalid registration.
+
 ## API
 
 ### `createPlugin(config)`
@@ -52,7 +57,8 @@ Register a UI-enabled step. `uiConfig`:
 
 - `page` — Path to the UI directory (must contain `index.html`)
 - `type` — `"page"` | `"panel"` | `"dialog"`
-- `width` / `height` — Default dimensions in pixels
+- `width` / `height` — Positive dimensions in pixels, no greater than 10,000
+- `timeoutMs` — Positive wait limit in milliseconds; defaults to 300,000
 
 ### `plugin.start()`
 
@@ -60,9 +66,16 @@ Begin listening for JSON-RPC messages on stdin.
 
 ## Protocol
 
-Communicates with flyto-core via JSON-RPC 2.0 over stdin/stdout:
+Communicates with Flyto2 Core via JSON-RPC 2.0 over stdin/stdout:
 
 - `handshake` — Negotiate protocol version, report available steps
 - `invoke` — Execute a step with input and context
 - `ping` — Health check
 - `shutdown` — Graceful shutdown
+
+`UIServer` binds to loopback and treats the random callback request ID as a
+single-use capability. Keep secrets in `StepContext.secrets`; never put them in
+browser props. Invoke input/context and step results are runtime validated. See
+the [full API](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/SDK_API.md),
+[generated source reference](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/generated/source-api.md),
+and [UI security boundary](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/UI_RUNTIME.md).

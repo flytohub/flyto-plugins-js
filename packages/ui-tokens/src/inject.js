@@ -14,9 +14,14 @@
  * @param {HTMLElement} [target=document.documentElement]
  */
 export function injectTokens(tokens, target) {
+  if (!tokens || typeof tokens !== 'object' || Array.isArray(tokens)) {
+    throw new TypeError('Flyto2 tokens must be an object');
+  }
   const el = target || document.documentElement;
   for (const [key, value] of Object.entries(tokens)) {
-    el.style.setProperty(key, value);
+    if (key.startsWith('--flyto-') && typeof value === 'string') {
+      el.style.setProperty(key, value);
+    }
   }
 }
 

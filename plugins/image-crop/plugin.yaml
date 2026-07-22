@@ -47,6 +47,8 @@ steps:
         label: Quality
         description: Output quality (0.1 - 1.0, for JPEG/WebP)
         default: 0.92
+        minimum: 0.1
+        maximum: 1
     output_schema:
       cropped_data_url:
         type: string
@@ -63,3 +65,5 @@ steps:
       width: 900
       height: 650
       timeout_ms: 600000
+
+required_secrets: []

@@ -4,7 +4,7 @@
  * @flyto2/plugin-ui-bridge
  *
  * Lightweight bridge that runs inside a plugin UI iframe.
- * Handles bidirectional communication with the host (flyto-cloud or SDK dev server).
+ * Handles bidirectional communication with Flyto2 Cloud or the SDK development server.
  *
  * Two communication channels:
  * 1. postMessage — for iframe ↔ host window communication (production)
@@ -25,6 +25,37 @@
 
 const FLYTO_MSG_PREFIX = 'flyto-plugin:';
 
+/** Return a safe loopback callback port or null. */
+function parseCallbackPort(raw) {
+  if (!raw || !/^\d{1,5}$/.test(raw)) return null;
+  const port = Number(raw);
+  return port >= 1 && port <= 65535 ? port : null;
+}
+
+/** Normalize an exact parent origin, preserving wildcard development mode. */
+function parseParentOrigin(raw) {
+  if (!raw || raw === '*') return '*';
+  const parsed = new URL(raw);
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new TypeError('Bridge parent origin must use http or https');
+  }
+  return parsed.origin;
+}
+
+/** Parse current props from current and legacy URL encodings. */
+function parseProps(raw) {
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    try {
+      return JSON.parse(decodeURIComponent(raw));
+    } catch {
+      return {};
+    }
+  }
+}
+
 /**
  * Create and initialize the bridge.
  * @param {Object} [options]
@@ -33,16 +64,12 @@ const FLYTO_MSG_PREFIX = 'flyto-plugin:';
  */
 export function createBridge(options = {}) {
   const params = new URLSearchParams(window.location.search);
-  const callbackPort = params.get('__flyto_port');
+  const callbackPort = parseCallbackPort(params.get('__flyto_port'));
   const requestId = params.get('__flyto_req');
-  const parentOrigin = options.origin || params.get('__flyto_origin') || '*';
+  const parentOrigin = parseParentOrigin(options.origin || params.get('__flyto_origin') || '*');
 
   /** @type {Record<string, unknown>} */
-  let currentProps = {};
-  try {
-    const raw = params.get('__flyto_props');
-    if (raw) currentProps = JSON.parse(decodeURIComponent(raw));
-  } catch { /* ignore */ }
+  let currentProps = parseProps(params.get('__flyto_props'));
 
   /** @type {Array<(props: Record<string, unknown>) => void>} */
   const propsHandlers = [];
@@ -52,6 +79,8 @@ export function createBridge(options = {}) {
 
   // Listen for messages from the host
   window.addEventListener('message', (event) => {
+    if (event.source !== window.parent) return;
+    if (parentOrigin !== '*' && event.origin !== parentOrigin) return;
     if (typeof event.data !== 'string') return;
     if (!event.data.startsWith(FLYTO_MSG_PREFIX)) return;
 
@@ -59,18 +88,26 @@ export function createBridge(options = {}) {
       const payload = JSON.parse(event.data.slice(FLYTO_MSG_PREFIX.length));
 
       if (payload.type === 'props') {
-        currentProps = payload.data || {};
+        currentProps = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+          ? payload.data
+          : {};
         propsHandlers.forEach((h) => h(currentProps));
       }
 
       if (payload.type === 'theme') {
-        const tokens = payload.data || {};
+        const tokens = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+          ? payload.data
+          : {};
+        const appliedTokens = {};
         // Apply tokens to :root
         const root = document.documentElement;
         for (const [key, value] of Object.entries(tokens)) {
-          root.style.setProperty(key, value);
+          if (key.startsWith('--flyto-') && typeof value === 'string') {
+            root.style.setProperty(key, value);
+            appliedTokens[key] = value;
+          }
         }
-        themeHandlers.forEach((h) => h(tokens));
+        themeHandlers.forEach((h) => h(appliedTokens));
       }
     } catch { /* ignore malformed messages */ }
   });
@@ -89,6 +126,8 @@ export function createBridge(options = {}) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: message,
+      }).then((response) => {
+        if (!response.ok) throw new Error(`Callback failed with HTTP ${response.status}`);
       }).catch(() => {
         // Fallback to postMessage if HTTP fails
         postToParent(type, data);
@@ -101,6 +140,8 @@ export function createBridge(options = {}) {
   }
 
   /**
+   * Post one prefixed message to the embedding parent window.
+   *
    * @param {string} type
    * @param {unknown} [data]
    */
@@ -125,6 +166,9 @@ export function createBridge(options = {}) {
      * @param {Record<string, unknown>} data — result data passed back to the workflow
      */
     submit(data) {
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        throw new TypeError('Bridge submit data must be an object');
+      }
       sendToHost('submit', data);
     },
 
@@ -140,6 +184,7 @@ export function createBridge(options = {}) {
      * @param {(props: Record<string, unknown>) => void} handler
      */
     onProps(handler) {
+      if (typeof handler !== 'function') throw new TypeError('onProps handler must be a function');
       propsHandlers.push(handler);
       // Fire immediately with current props
       if (Object.keys(currentProps).length > 0) {
@@ -152,6 +197,7 @@ export function createBridge(options = {}) {
      * @param {(tokens: Record<string, string>) => void} handler
      */
     onTheme(handler) {
+      if (typeof handler !== 'function') throw new TypeError('onTheme handler must be a function');
       themeHandlers.push(handler);
     },
   };

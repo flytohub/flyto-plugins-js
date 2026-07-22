@@ -5,10 +5,29 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
-    "dist"
+    "dist/index.js",
+    "dist/index.js.map",
+    "dist/index.d.ts",
+    "dist/index.d.ts.map",
+    "dist/plugin.js",
+    "dist/plugin.js.map",
+    "dist/plugin.d.ts",
+    "dist/plugin.d.ts.map",
+    "dist/types.js",
+    "dist/types.js.map",
+    "dist/types.d.ts",
+    "dist/types.d.ts.map",
+    "dist/ui-server.js",
+    "dist/ui-server.js.map",
+    "dist/ui-server.d.ts",
+    "dist/ui-server.d.ts.map",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "test": "node --test dist/**/*.test.js",
     "prepublishOnly": "npm run build"
   },
@@ -31,13 +50,18 @@
     "directory": "packages/sdk"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com",
-    "access": "restricted"
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@flyto2/plugin-ui-bridge": "^0.1.0",
+    "@flyto2/plugin-ui-tokens": "^0.1.0"
   },
   "devDependencies": {
+    "@types/node": "^24.0.0",
     "typescript": "^5.4.0"
   }
 }

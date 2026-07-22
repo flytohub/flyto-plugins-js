@@ -55,8 +55,10 @@ steps:
       limit:
         type: number
         label: Limit
-        description: Maximum number of channels to return
+        description: Maximum number of channels to return (1-200)
         default: 100
+        minimum: 1
+        maximum: 200
     output_schema:
       channels:
         type: array

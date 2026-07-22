@@ -1,6 +1,7 @@
 # @flyto2/plugin-ui-tokens
 
-CSS design tokens for Flyto2 plugin UIs. Import this package to match the flyto-cloud dark theme.
+CSS design tokens for Flyto2 plugin UIs. Import this package to match Flyto2
+Cloud surfaces.
 
 ## Usage
 
@@ -69,3 +70,9 @@ When using `@flyto2/plugin-sdk` with a UI step, tokens are automatically injecte
 ## Utility Classes
 
 Pre-built component classes: `.flyto-btn`, `.flyto-btn-primary`, `.flyto-btn-secondary`, `.flyto-input`, `.flyto-card`, `.flyto-label`.
+
+The `./inject` subpath exports `injectTokens()` and `readTokens()` as ES modules.
+Runtime injection ignores non-string values and properties outside the
+`--flyto-*` namespace. See the [complete generated token
+reference](https://github.com/flytohub/flyto-plugins-js/blob/main/docs/generated/ui-tokens.md)
+for all 78 properties and eight utility classes.

@@ -28,7 +28,7 @@ describe("FlytoPlugin", () => {
   let handle: (req: JsonRpcRequest) => Promise<JsonRpcResponse | null>;
 
   beforeEach(() => {
-    plugin = new FlytoPlugin({ id: "test-plugin", version: "1.0.0" });
+    plugin = new FlytoPlugin({ id: "test/plugin", version: "1.0.0" });
     plugin.step("echo", async (input) => ({
       ok: true,
       data: { echo: input.message },
@@ -37,6 +37,53 @@ describe("FlytoPlugin", () => {
       throw new Error("intentional failure");
     });
     handle = getHandler(plugin);
+  });
+
+  describe("registration validation", () => {
+    it("should reject malformed plugin and step identifiers", () => {
+      assert.throws(() => new FlytoPlugin({ id: "missing-slash", version: "1.0.0" }), /vendor\/name/);
+      assert.throws(() => new FlytoPlugin({ id: "test/plugin", version: "latest" }), /semantic version/);
+      assert.throws(() => plugin.step("../unsafe", async () => ({ ok: true })), /Step id/);
+      assert.throws(
+        () => plugin.step("not_callable", null as unknown as () => Promise<{ ok: true }>),
+        /must be a function/,
+      );
+    });
+
+    it("should reject duplicate step registrations across handler types", () => {
+      assert.throws(() => plugin.step("echo", async () => ({ ok: true })), /already registered/);
+      assert.throws(
+        () => plugin.uiStep("echo", { page: "ui" }, async () => ({ ok: true })),
+        /already registered/,
+      );
+    });
+
+    it("should reject unsafe UI roots and timeouts", () => {
+      assert.throws(
+        () => plugin.uiStep("unsafe", { page: "../outside" }, async () => ({ ok: true })),
+        /plugin root/,
+      );
+      assert.throws(
+        () => plugin.uiStep("timeout", { page: "ui", timeoutMs: 0 }, async () => ({ ok: true })),
+        /positive finite/,
+      );
+      assert.throws(
+        () => plugin.uiStep("windows", { page: "..\\outside" }, async () => ({ ok: true })),
+        /plugin root/,
+      );
+      assert.throws(
+        () => plugin.uiStep(
+          "mode",
+          { page: "ui", type: "popup" as "dialog" },
+          async () => ({ ok: true }),
+        ),
+        /page, panel, or dialog/,
+      );
+      assert.throws(
+        () => plugin.uiStep("size", { page: "ui", width: 20_000 }, async () => ({ ok: true })),
+        /no greater than 10000/,
+      );
+    });
   });
 
   describe("handshake", () => {
@@ -57,6 +104,25 @@ describe("FlytoPlugin", () => {
   });
 
   describe("invoke", () => {
+    it("should return JSON-RPC invalid params for a missing step id", async () => {
+      const res = await handle({ jsonrpc: "2.0", method: "invoke", params: {}, id: 1 });
+      assert.equal(res?.error?.code, -32602);
+      const badInput = await handle({
+        jsonrpc: "2.0",
+        method: "invoke",
+        params: { step: "echo", input: [] as unknown as Record<string, unknown> },
+        id: 2,
+      });
+      assert.equal(badInput?.error?.code, -32602);
+      const badContext = await handle({
+        jsonrpc: "2.0",
+        method: "invoke",
+        params: { step: "echo", context: "bad" as unknown as Record<string, unknown> },
+        id: 3,
+      });
+      assert.equal(badContext?.error?.code, -32602);
+    });
+
     it("should execute a registered step", async () => {
       const res = await handle({
         jsonrpc: "2.0",
@@ -98,6 +164,17 @@ describe("FlytoPlugin", () => {
       assert.equal(result.ok, false);
       assert.equal(result.error.code, "EXECUTION_ERROR");
       assert.match(result.error.message, /intentional failure/);
+
+      plugin.step("invalid_result", async () => null as unknown as { ok: true });
+      const invalid = await handle({
+        jsonrpc: "2.0",
+        method: "invoke",
+        params: { step: "invalid_result", input: {} },
+        id: 40,
+      });
+      const invalidResult = invalid?.result as { ok: boolean; error: { message: string } };
+      assert.equal(invalidResult.ok, false);
+      assert.match(invalidResult.error.message, /boolean 'ok'/);
     });
 
     it("should pass context to handler", async () => {
@@ -106,6 +183,8 @@ describe("FlytoPlugin", () => {
         data: {
           hasEndpoint: !!ctx.browserWsEndpoint,
           execId: ctx.executionId,
+          token: ctx.secrets?.TOKEN,
+          numericSecret: ctx.secrets?.NUMERIC,
         },
       }));
 
@@ -118,6 +197,7 @@ describe("FlytoPlugin", () => {
           context: {
             execution_id: "exec-123",
             browser_ws_endpoint: "ws://localhost:9222",
+            secrets: { TOKEN: "secret", NUMERIC: 123 },
           },
         },
         id: 5,
@@ -128,6 +208,8 @@ describe("FlytoPlugin", () => {
       assert.equal(result.ok, true);
       assert.equal(result.data.hasEndpoint, true);
       assert.equal(result.data.execId, "exec-123");
+      assert.equal(result.data.token, "secret");
+      assert.equal(result.data.numericSecret, undefined);
     });
   });
 
@@ -156,6 +238,15 @@ describe("FlytoPlugin", () => {
       assert.ok(res);
       assert.ok(res.error);
       assert.equal(res.error.code, -32601);
+    });
+  });
+
+  describe("request validation", () => {
+    it("should reject an invalid JSON-RPC envelope with an id", async () => {
+      const res = await handle(
+        { jsonrpc: "1.0", method: "ping", id: 21 } as unknown as JsonRpcRequest,
+      );
+      assert.equal(res?.error?.code, -32600);
     });
   });
 

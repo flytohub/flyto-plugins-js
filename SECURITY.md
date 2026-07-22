@@ -6,8 +6,9 @@ We release patches for security vulnerabilities in the following versions of Fly
 
 | Version | Supported |
 | ------- | --------- |
-| Latest release (`main`) | :white_check_mark: |
-| older | :x: |
+| Latest npm release | Supported |
+| `main` unreleased code | Development only |
+| Older releases | Not supported |
 
 ## Reporting a Vulnerability
 

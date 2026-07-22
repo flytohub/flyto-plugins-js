@@ -9,7 +9,7 @@ Tests the full flow:
   4. UI step invoke notifications
   5. Graceful shutdown
 
-This test uses the echo-test-plugin from @flyto/plugin-sdk test fixtures.
+This test uses the echo-test-plugin from @flyto2/plugin-sdk test fixtures.
 """
 
 import asyncio
@@ -31,6 +31,7 @@ class PluginProcess:
     """Lightweight replica of plugin_runtime.PluginProcess for testing."""
 
     def __init__(self, entry_path: str, cwd: str):
+        """Configure the child entry point and JSON-RPC tracking state."""
         self.entry_path = entry_path
         self.cwd = cwd
         self.process = None
@@ -40,6 +41,7 @@ class PluginProcess:
         self._notifications = []
 
     async def start(self):
+        """Start the Node plugin and its stdout reader task."""
         self.process = await asyncio.create_subprocess_exec(
             "node", self.entry_path,
             stdin=asyncio.subprocess.PIPE,
@@ -50,6 +52,7 @@ class PluginProcess:
         self._reader_task = asyncio.create_task(self._read_stdout())
 
     async def stop(self):
+        """Cancel the reader and terminate a child that is still running."""
         if self._reader_task:
             self._reader_task.cancel()
         if self.process and self.process.returncode is None:
@@ -57,6 +60,7 @@ class PluginProcess:
             await asyncio.wait_for(self.process.wait(), timeout=5)
 
     async def call(self, method, params, timeout=10.0):
+        """Send one correlated JSON-RPC request and await its result."""
         self._rpc_id += 1
         rpc_id = self._rpc_id
         request = {"jsonrpc": "2.0", "method": method, "params": params, "id": rpc_id}
@@ -69,6 +73,7 @@ class PluginProcess:
         return await asyncio.wait_for(fut, timeout=timeout)
 
     async def _read_stdout(self):
+        """Resolve pending calls and retain asynchronous notifications."""
         while True:
             try:
                 line = await self.process.stdout.readline()
@@ -97,6 +102,7 @@ failed = 0
 
 
 def report(name, success, detail=""):
+    """Record and print one integration assertion."""
     global passed, failed
     if success:
         passed += 1
@@ -107,7 +113,8 @@ def report(name, success, detail=""):
 
 
 async def run_tests():
-    print("Integration Test: plugin_runtime ↔ @flyto/plugin-sdk")
+    """Exercise handshake, invocation, health, and shutdown over stdio."""
+    print("Integration Test: plugin_runtime ↔ @flyto2/plugin-sdk")
     print("=" * 55)
 
     echo_plugin = os.path.join(SDK_DIST, "echo-test-plugin.js")

@@ -51,6 +51,8 @@ steps:
         description: string
         required: boolean          # default: false
         default: any               # default value
+        minimum: number             # inclusive numeric minimum
+        maximum: number             # inclusive numeric maximum
         placeholder: string        # input placeholder
         options:                   # for select/enum types
           - value: string
@@ -80,6 +82,12 @@ steps:
 required_secrets:                  # List of secret names the plugin needs
   - SECRET_NAME
 ```
+
+`id`, `version`, step IDs, UI page/type/dimensions/timeouts, required secrets,
+and supported constraints are runtime contracts. The workspace gate compares
+manifests with package metadata and TypeScript registrations. A manifest cannot
+grant runtime validation by itself; the handler must enforce the same input and
+result rules.
 
 ## UI Step Lifecycle
 

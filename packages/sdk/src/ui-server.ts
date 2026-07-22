@@ -13,7 +13,7 @@
 import * as http from "http";
 import * as fs from "fs";
 import * as path from "path";
-import * as net from "net";
+import { randomUUID } from "node:crypto";
 import type { UIServerConfig, UIResult, UIWaitOptions } from "./types.js";
 
 const MIME_TYPES: Record<string, string> = {
@@ -45,7 +45,10 @@ function findBridgeFile(filename: string): string | null {
 
   // Try node_modules
   try {
-    const resolved = require.resolve(`@flyto2/plugin-ui-bridge/${filename}`);
+    const request = filename === "auto.js"
+      ? "@flyto2/plugin-ui-bridge/auto"
+      : "@flyto2/plugin-ui-bridge";
+    const resolved = require.resolve(request);
     return resolved;
   } catch {
     return null;
@@ -58,23 +61,11 @@ function findTokensFile(filename: string): string | null {
   if (fs.existsSync(monorepo)) return monorepo;
 
   try {
-    const resolved = require.resolve(`@flyto2/plugin-ui-tokens/${filename}`);
+    const resolved = require.resolve("@flyto2/plugin-ui-tokens/tokens.css");
     return resolved;
   } catch {
     return null;
   }
-}
-
-/** Find a free port */
-async function findFreePort(preferred: number = 0): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.listen(preferred, "127.0.0.1", () => {
-      const addr = server.address() as net.AddressInfo;
-      server.close(() => resolve(addr.port));
-    });
-    server.on("error", reject);
-  });
 }
 
 /**
@@ -104,11 +95,20 @@ function buildInjectionScript(port: number, requestId: string, props: Record<str
     const FLYTO_MSG_PREFIX = 'flyto-plugin:';
     const PORT = ${port};
     const REQ_ID = ${serializeForScript(requestId)};
-    const PROPS = JSON.parse(decodeURIComponent('${encodedProps}'));
+    const PROPS = JSON.parse(decodeURIComponent(${serializeForScript(encodedProps)}));
 
     let currentProps = PROPS;
     const propsHandlers = [];
     const themeHandlers = [];
+
+    function postToParent(type, data) {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage(
+          FLYTO_MSG_PREFIX + JSON.stringify({ type, data, requestId: REQ_ID }),
+          '*'
+        );
+      }
+    }
 
     function sendToHost(type, data) {
       const message = JSON.stringify({ type, data, requestId: REQ_ID });
@@ -117,44 +117,61 @@ function buildInjectionScript(port: number, requestId: string, props: Record<str
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: message,
+      }).then(function(response) {
+        if (!response.ok) throw new Error('Callback failed with HTTP ' + response.status);
       }).catch(function() {
-        // Fallback: postMessage
-        if (window.parent && window.parent !== window) {
-          window.parent.postMessage(FLYTO_MSG_PREFIX + message, '*');
-        }
+        postToParent(type, data);
       });
     }
 
     // Listen for host messages (theme updates, prop updates)
     window.addEventListener('message', function(event) {
+      if (event.source !== window.parent) return;
       if (typeof event.data !== 'string') return;
       if (event.data.indexOf(FLYTO_MSG_PREFIX) !== 0) return;
       try {
         var payload = JSON.parse(event.data.slice(FLYTO_MSG_PREFIX.length));
         if (payload.type === 'props') {
-          currentProps = payload.data || {};
+          currentProps = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+            ? payload.data
+            : {};
           propsHandlers.forEach(function(h) { h(currentProps); });
         }
         if (payload.type === 'theme') {
-          var tokens = payload.data || {};
+          var tokens = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+            ? payload.data
+            : {};
+          var appliedTokens = {};
           var root = document.documentElement;
           Object.keys(tokens).forEach(function(key) {
-            root.style.setProperty(key, tokens[key]);
+            if (key.indexOf('--flyto-') === 0 && typeof tokens[key] === 'string') {
+              root.style.setProperty(key, tokens[key]);
+              appliedTokens[key] = tokens[key];
+            }
           });
-          themeHandlers.forEach(function(h) { h(tokens); });
+          themeHandlers.forEach(function(h) { h(appliedTokens); });
         }
       } catch(e) {}
     });
 
     window.flyto = {
       get props() { return currentProps; },
-      submit: function(data) { sendToHost('submit', data); },
+      submit: function(data) {
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new TypeError('Bridge submit data must be an object');
+        }
+        sendToHost('submit', data);
+      },
       cancel: function() { sendToHost('cancel', null); },
       onProps: function(handler) {
+        if (typeof handler !== 'function') throw new TypeError('onProps handler must be a function');
         propsHandlers.push(handler);
         if (Object.keys(currentProps).length > 0) handler(currentProps);
       },
-      onTheme: function(handler) { themeHandlers.push(handler); },
+      onTheme: function(handler) {
+        if (typeof handler !== 'function') throw new TypeError('onTheme handler must be a function');
+        themeHandlers.push(handler);
+      },
     };
 
     sendToHost('ready', {});
@@ -162,6 +179,7 @@ function buildInjectionScript(port: number, requestId: string, props: Record<str
 </script>`;
 }
 
+/** Serves one confined plugin UI root and capability-bound callbacks. */
 export class UIServer {
   private server: http.Server | null = null;
   private port: number = 0;
@@ -172,25 +190,44 @@ export class UIServer {
     timeout?: ReturnType<typeof setTimeout>;
   }>();
 
+  /** Resolve and validate the static-file root before binding a listener. */
   constructor(config: UIServerConfig) {
-    this.uiRoot = config.uiRoot;
+    if (!config?.uiRoot || typeof config.uiRoot !== "string") {
+      throw new TypeError("UIServer uiRoot must be a non-empty path");
+    }
+    const resolvedRoot = path.resolve(config.uiRoot);
+    if (!fs.existsSync(resolvedRoot) || !fs.statSync(resolvedRoot).isDirectory()) {
+      throw new TypeError("UIServer uiRoot must reference an existing directory");
+    }
+    this.uiRoot = fs.realpathSync(resolvedRoot);
   }
 
   /** Start the HTTP server. Returns the port it's listening on. */
   async start(): Promise<number> {
     if (this.server) return this.port;
 
-    this.port = await findFreePort();
-
     this.server = http.createServer((req, res) => {
-      this.handleRequest(req, res);
+      try {
+        this.handleRequest(req, res);
+      } catch {
+        if (!res.headersSent) {
+          res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+        }
+        res.end("Internal server error");
+      }
     });
 
     return new Promise((resolve, reject) => {
-      this.server!.listen(this.port, "127.0.0.1", () => {
+      this.server!.listen(0, "127.0.0.1", () => {
+        const address = this.server!.address();
+        if (!address || typeof address === "string") {
+          reject(new Error("UI server did not expose a TCP port"));
+          return;
+        }
+        this.port = address.port;
         resolve(this.port);
       });
-      this.server!.on("error", reject);
+      this.server!.once("error", reject);
     });
   }
 
@@ -208,6 +245,7 @@ export class UIServer {
     return new Promise((resolve) => {
       this.server!.close(() => {
         this.server = null;
+        this.port = 0;
         resolve();
       });
     });
@@ -223,8 +261,14 @@ export class UIServer {
    * Returns a promise that resolves with the UI result.
    */
   waitForUI(options: UIWaitOptions): Promise<UIResult> {
-    const requestId = options.requestId || crypto.randomUUID();
-    const timeoutMs = options.timeoutMs || 300_000; // 5 min default
+    const requestId = options.requestId || randomUUID();
+    const timeoutMs = options.timeoutMs ?? 300_000; // 5 min default
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new TypeError("UI timeoutMs must be a positive finite number");
+    }
+    if (this.pendingRequests.has(requestId)) {
+      throw new Error(`UI request '${requestId}' is already pending`);
+    }
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -240,28 +284,52 @@ export class UIServer {
    * Build the full URL for a UI page.
    */
   buildUIUrl(page: string, requestId: string, props: Record<string, unknown> = {}): string {
-    const encodedProps = encodeURIComponent(JSON.stringify(props));
-    const pagePath = page.startsWith("/") ? page : `/${page}`;
-    return `http://127.0.0.1:${this.port}${pagePath}?__flyto_port=${this.port}&__flyto_req=${requestId}&__flyto_props=${encodedProps}`;
+    if (!this.server || this.port === 0) {
+      throw new Error("UI server must be started before building a URL");
+    }
+    const url = new URL(`http://127.0.0.1:${this.port}`);
+    url.pathname = page.startsWith("/") ? page : `/${page}`;
+    url.searchParams.set("__flyto_port", String(this.port));
+    url.searchParams.set("__flyto_req", requestId);
+    url.searchParams.set("__flyto_props", JSON.stringify(props));
+    return url.toString();
   }
 
+  /** Route one loopback HTTP request and apply baseline response hardening. */
   private handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
     const url = new URL(req.url || "/", `http://127.0.0.1:${this.port}`);
     const pathname = url.pathname;
 
-    // CORS headers for local development
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
+    const origin = req.headers.origin;
+    const allowedOrigins = new Set([
+      `http://127.0.0.1:${this.port}`,
+      `http://localhost:${this.port}`,
+    ]);
+    if (origin && allowedOrigins.has(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+
     if (req.method === "OPTIONS") {
-      res.writeHead(204);
+      res.writeHead(origin && !allowedOrigins.has(origin) ? 403 : 204);
       res.end();
       return;
     }
 
     // Callback endpoint — receives submit/cancel from the UI
     if (pathname === "/__flyto_callback" && req.method === "POST") {
+      if (origin && !allowedOrigins.has(origin)) {
+        res.writeHead(403, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: false, error: "Origin not allowed" }));
+        return;
+      }
       this.handleCallback(req, res);
       return;
     }
@@ -284,13 +352,22 @@ export class UIServer {
     this.serveStaticFile(req, res, pathname);
   }
 
+  /** Validate and resolve a submit/cancel callback for a pending request ID. */
   private handleCallback(req: http.IncomingMessage, res: http.ServerResponse): void {
+    const contentType = req.headers["content-type"] || "";
+    if (!contentType.toLowerCase().startsWith("application/json")) {
+      res.writeHead(415, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, error: "Content-Type must be application/json" }));
+      return;
+    }
     const MAX_BODY_SIZE = 10 * 1024 * 1024; // 10MB
     let body = "";
+    let bodyBytes = 0;
     let aborted = false;
     req.on("data", (chunk) => {
       body += chunk;
-      if (body.length > MAX_BODY_SIZE) {
+      bodyBytes += Buffer.byteLength(chunk);
+      if (bodyBytes > MAX_BODY_SIZE) {
         aborted = true;
         res.writeHead(413, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: false, error: "Payload too large" }));
@@ -301,19 +378,38 @@ export class UIServer {
       if (aborted) return;
       try {
         const payload = JSON.parse(body);
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+          throw new TypeError("Callback body must be an object");
+        }
         const { type, data, requestId } = payload;
+        if (type !== "submit" && type !== "cancel") {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Callback type must be submit or cancel" }));
+          return;
+        }
+        if (typeof requestId !== "string" || !requestId) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "requestId is required" }));
+          return;
+        }
 
         const pending = this.pendingRequests.get(requestId);
-        if (pending) {
-          if (pending.timeout) clearTimeout(pending.timeout);
-          this.pendingRequests.delete(requestId);
-
-          if (type === "submit") {
-            pending.resolve({ submitted: true, data: data || {} });
-          } else if (type === "cancel") {
-            pending.resolve({ submitted: false, data: {} });
-          }
+        if (!pending) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Unknown or completed requestId" }));
+          return;
         }
+        if (type === "submit" && (data === null || typeof data !== "object" || Array.isArray(data))) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "Submit data must be an object" }));
+          return;
+        }
+
+        if (pending.timeout) clearTimeout(pending.timeout);
+        this.pendingRequests.delete(requestId);
+        pending.resolve(type === "submit"
+          ? { submitted: true, data: data as Record<string, unknown> }
+          : { submitted: false, data: {} });
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ ok: true }));
@@ -324,6 +420,7 @@ export class UIServer {
     });
   }
 
+  /** Serve one SDK-owned bridge or token asset. */
   private serveVirtualFile(res: http.ServerResponse, filePath: string | null, ext: string): void {
     if (!filePath || !fs.existsSync(filePath)) {
       res.writeHead(404);
@@ -335,6 +432,7 @@ export class UIServer {
     res.end(content);
   }
 
+  /** Resolve and serve one static UI file without crossing the real UI root. */
   private serveStaticFile(req: http.IncomingMessage, res: http.ServerResponse, pathname: string): void {
     // Resolve file path — default to index.html for root
     let filePath = path.join(this.uiRoot, pathname);
@@ -345,15 +443,19 @@ export class UIServer {
     }
 
     // Security: prevent path traversal
+    const root = fs.realpathSync(this.uiRoot);
     const resolved = path.resolve(filePath);
-    if (!resolved.startsWith(path.resolve(this.uiRoot))) {
+    const relative = path.relative(root, resolved);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
       res.writeHead(403);
       res.end("Forbidden");
       return;
     }
 
-    // Check if file exists — try with .html extension
-    if (!fs.existsSync(resolved)) {
+    // Check if file exists — try a directory index or .html extension.
+    if (fs.existsSync(resolved) && fs.statSync(resolved).isDirectory()) {
+      filePath = path.join(resolved, "index.html");
+    } else if (!fs.existsSync(resolved)) {
       const withHtml = resolved + ".html";
       if (fs.existsSync(withHtml)) {
         filePath = withHtml;
@@ -370,6 +472,21 @@ export class UIServer {
       filePath = resolved;
     }
 
+    if (!fs.existsSync(filePath)) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+
+    const realFile = fs.realpathSync(filePath);
+    const realRelative = path.relative(root, realFile);
+    if (realRelative.startsWith("..") || path.isAbsolute(realRelative)) {
+      res.writeHead(403);
+      res.end("Forbidden");
+      return;
+    }
+    filePath = realFile;
+
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
@@ -383,7 +500,7 @@ export class UIServer {
       let props: Record<string, unknown> = {};
       try {
         const raw = url.searchParams.get("__flyto_props");
-        if (raw) props = JSON.parse(decodeURIComponent(raw));
+        if (raw) props = JSON.parse(raw);
       } catch { /* ignore */ }
 
       // Inject tokens CSS + bridge script before </head> or at start

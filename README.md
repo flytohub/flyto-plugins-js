@@ -30,17 +30,17 @@ Good fit if you searched for:
 Official links: [flyto2.com](https://flyto2.com) ·
 [Docs](https://docs.flyto2.com) ·
 [npm package](https://www.npmjs.com/package/@flyto2/plugin-sdk) ·
-[flyto-core](https://github.com/flytohub/flyto-core)
+[Flyto2 Core repository](https://github.com/flytohub/flyto-core)
 
 ## Architecture
 
 ```
-flyto-core (Python) ←── JSON-RPC stdin/stdout ──→ Plugin (Node.js)
+Flyto2 Core (Python) ←── JSON-RPC stdin/stdout ──→ Plugin (Node.js)
                                                       │
                                                       ├── Headless steps (like Slack send_message)
                                                       └── UI steps (serve HTML via local HTTP server)
                                                             │
-                                                            └── iframe in flyto-cloud frontend
+                                                            └── iframe in Flyto2 Cloud
 ```
 
 ## Packages
@@ -62,15 +62,43 @@ flyto-core (Python) ←── JSON-RPC stdin/stdout ──→ Plugin (Node.js)
 ## Quick Start
 
 ```bash
-# Install dependencies
-npm install
+npm ci
+npm run verify
+```
 
-# Build all packages
+For a consumer project, install only the SDK:
+
+```bash
+npm install @flyto2/plugin-sdk
+```
+
+Node.js 20 or newer is required. The SDK has no hosted control-plane
+dependency: Flyto2 Core launches the built plugin process and exchanges one
+JSON-RPC object per line over stdin/stdout.
+
+## Testing
+
+```bash
+# Compile every workspace
 npm run build
 
-# Run tests
+# Run 57 Node tests and 17 Python process scenarios
 npm test
+
+# Check source/manifest/package parity and generated references
+npm run contracts
+npm run docs
+
+# Pack all six public workspaces and smoke-test installed tarballs
+npm run pack:check
 ```
+
+## Configuration
+
+Local build, lint, packaging, and tests require no environment variables. The
+Slack reference plugin resolves `SLACK_BOT_TOKEN` from the Flyto2 Core secret
+context first and the process environment second. Use `.env.example` only as a
+name reference; do not commit credentials or pass them to UI props.
 
 ## Usage
 
@@ -97,7 +125,26 @@ plugin.uiStep('configure', { page: 'ui', type: 'dialog', width: 600, height: 400
 plugin.start();
 ```
 
-See [PLUGIN_SPEC.md](PLUGIN_SPEC.md) for the full `plugin.yaml` specification.
+Duplicate or malformed step IDs are rejected. UI directories must be relative
+to a plugin root, and handler input and browser submissions must be treated as
+untrusted data.
+
+## API Reference
+
+- [Generated source API](docs/generated/source-api.md) maps all 111 named
+  production declaration to source and its contract.
+- [SDK API](docs/SDK_API.md) explains process, handler, server, bridge, and token
+  behavior.
+- [Generated plugin contracts](docs/generated/plugin-contracts.md) derives all
+  five step schemas from the three `plugin.yaml` files.
+- [Form field contract](docs/FORM_FIELDS.md) covers every dynamic field type,
+  validation rule, condition, and file limit.
+- [Generated UI token reference](docs/generated/ui-tokens.md) lists all 78 CSS
+  custom properties and eight utility classes.
+- [plugin.yaml specification](PLUGIN_SPEC.md) defines discovery metadata.
+
+Generated references are freshness checked by `npm run docs`; edit their source
+or manifest and run `npm run docs:generate` instead of editing generated files.
 
 ## Development
 
@@ -111,9 +158,42 @@ flyto-plugins-js/
 │   ├── slack/         @flyto2/plugin-slack
 │   ├── form-builder/  @flyto2/plugin-form-builder
 │   └── image-crop/    @flyto2/plugin-image-crop
-├── tests/             E2E integration tests
+├── scripts/           Contract, docs, and package-content gates
+├── tests/             Python process interoperability tests
+├── docs/generated/    Source-derived API and manifest references
 └── PLUGIN_SPEC.md     plugin.yaml specification
 ```
+
+The root `npm run verify` command starts from a clean tree, compiles and lints
+all six workspaces, runs unit and process tests, validates package/manifest
+parity, checks generated documentation freshness, installs packed SDK assets in
+a temporary consumer, and runs strict Flyto2 Indexer analysis.
+
+## Security
+
+The interactive server binds only to `127.0.0.1`, confines files by resolved
+real path, uses random request IDs as callback capabilities, caps JSON callback
+bodies at 10 MiB, and allows callback CORS only from its exact loopback origin.
+Never place credentials in UI props or logs. Core remains responsible for
+process isolation, authorization, tenant boundaries, and secret resolution.
+
+Read [the UI security boundary](docs/UI_RUNTIME.md) and
+[SECURITY.md](SECURITY.md). Report vulnerabilities privately to
+`security@flyto2.com`.
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md), project state, architecture, and
+decisions before changing protocol or manifest contracts. A change to a
+reference plugin must keep its package version, manifest identity, TypeScript
+registration, generated contract, tests, and tarball content aligned.
+
+## Publishing
+
+Six public packages publish to npmjs.com from signed `v*` tags using GitHub OIDC
+trusted publishing and npm provenance. No npm automation token is required.
+See [the release runbook](docs/RELEASE.md) for one-time publisher setup, version
+parity, tag rules, rollback boundaries, and the historical `v0.1.1` constraint.
 
 ## License
 

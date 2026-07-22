@@ -2,14 +2,22 @@
 
 ## P0
 
-- Preserve the repo boundary described in `ARCHITECTURE.md`.
-- Keep release-impacting changes covered by tests, guards, docs, or handoffs.
+- Preserve JSON-RPC compatibility and the Core/host ownership boundary.
+- Require source, manifest, package, generated docs, tests, and packed tarballs
+  to agree before any public release.
+- Publish only from a signed version tag after all six npm packages trust the
+  repository's OIDC workflow.
 
 ## P1
 
-- Raise or maintain health at target: C.
-- Keep product-line mapping current with Flyto2 release gates.
+- Maintain repository and documentation health at B or better.
+- Add keyboard semantics for every Form Builder custom control.
+- Add keyboard and pointer-event crop adjustment to Image Crop.
+- Add host-enforced network and payload policy examples for remote image input.
 
 ## P2
 
-- Expand docs as the repo's Flyto2 role matures.
+- Add cursor pagination to Slack channel discovery.
+- Add an automated accessibility browser suite for reference plugin UIs.
+- Publish a minimal third-party plugin template generated from the same
+  manifest and package contract checks.

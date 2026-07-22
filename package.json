@@ -25,12 +25,22 @@
     "plugins/*"
   ],
   "scripts": {
+    "clean": "npm run clean --workspaces --if-present",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "verify": "npm run lint && npm run test && npm run build && flyto-index verify . --json"
+    "test": "npm run build && npm run test:unit && npm run test:integration",
+    "test:unit": "npm run test --workspaces --if-present",
+    "test:integration": "python3 tests/test_plugin_runtime.py && python3 tests/test_e2e_core.py",
+    "lint": "npm run build --workspace @flyto2/plugin-sdk && npm run lint --workspaces --if-present",
+    "contracts": "node scripts/check-workspace-contracts.mjs",
+    "docs": "node scripts/generate-reference.mjs",
+    "docs:generate": "node scripts/generate-reference.mjs --write",
+    "pack:check": "node scripts/check-package-contents.mjs",
+    "verify": "npm run clean && npm run lint && npm test && npm run contracts && npm run docs && npm run pack:check && flyto-index verify . --full-scan --strict --json"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.0"
   }
 }
