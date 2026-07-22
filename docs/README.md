@@ -1,5 +1,6 @@
 # Documentation Index
 
+- [Plugin protocol and security whitepaper](WHITEPAPER.md)
 - [Feature and ownership reference](FEATURES.md)
 - [SDK classes, functions, and types](SDK_API.md)
 - [Generated source API](generated/source-api.md)
