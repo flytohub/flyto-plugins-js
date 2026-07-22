@@ -37,5 +37,5 @@ Last local verification on 2026-07-22:
   manifest errors or warnings across four source areas and nine features.
 - Supply chain: zero production dependency vulnerabilities; Apache-2.0 detected,
   no unlicensed dependencies, and no copyleft warning.
-- Repository: no stale Flyto/Flyto2 domain or email findings, no diff whitespace
+- Repository: no retired standalone product naming or unsupported email findings, no diff whitespace
   errors, and local `main` had zero divergence from `origin/main` before commit.
