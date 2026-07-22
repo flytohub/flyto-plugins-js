@@ -11,7 +11,9 @@
     "security": "SECURITY.md",
     "changelog": "CHANGELOG.md",
     "feature_reference": "docs/FEATURES.md",
-    "whitepaper": "docs/WHITEPAPER.md"
+    "whitepaper": "docs/WHITEPAPER.md",
+    "source_reference": ["docs/generated/source-api.md", "docs/generated/plugin-contracts.md", "docs/generated/ui-tokens.md"],
+    "source_reference_exclude": ["scripts/**", "tests/**", "**/*.test.*"]
   },
   "source_areas": [
     {
