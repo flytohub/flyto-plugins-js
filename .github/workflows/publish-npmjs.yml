@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           npm ci
-          python -m pip install "git+https://github.com/flytohub/flyto-indexer.git@8e2e51d5e9e91aa83ee51c38cf99276babf4cdb4"
+          python -m pip install "flyto-indexer @ git+https://github.com/flytohub/flyto-indexer@7ad6917887ffde8e43a3cee029c849a1a0ba2909"
 
       - name: Verify release contents
         run: npm run verify
