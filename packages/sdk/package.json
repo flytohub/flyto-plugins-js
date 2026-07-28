@@ -61,7 +61,7 @@
     "@flyto2/plugin-ui-tokens": "^0.1.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.1.2",
     "typescript": "^5.4.0"
   }
 }
