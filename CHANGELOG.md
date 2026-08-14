@@ -19,6 +19,8 @@
 
 ### Changed
 
+- Capped the governed `npm run verify` timeout at the coding-service contract
+  maximum so preflight can validate the repository before a job is admitted.
 - Made workspace build, lint, test, documentation, contract, tarball, and strict
   index validation part of one clean `npm run verify` gate.
 - Public package metadata now targets npmjs.com with public access and includes
