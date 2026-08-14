@@ -1,6 +1,10 @@
 # State
 
-Current state on 2026-07-22:
+Current state on 2026-08-14:
+
+- Governed coding jobs install the pinned workspace dependency graph and run
+  the complete build, test, documentation, package, security, and strict
+  Indexer gate through `.flyto/coding.yaml` before independent Codex audit.
 
 - Repo status: active
 - Product lines: cloud_apps_automation, data, zero_person_agent

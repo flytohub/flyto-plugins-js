@@ -4,6 +4,9 @@
 
 ### Added
 
+- Added a governed Flyto2 coding contract for pinned workspace installation
+  and the complete SDK release verification suite.
+
 - Added project memory files, workflow docs, and handoff registry.
 - Added complete SDK, UI runtime, manifest, and five-step reference-plugin
   documentation with machine-readable feature ownership and CI enforcement.

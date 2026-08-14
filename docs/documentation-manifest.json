@@ -37,7 +37,7 @@
     {
       "id": "workspace-quality",
       "description": "Workspace orchestration, Python process interoperability tests, contribution rules, and continuous validation and publication workflows.",
-      "paths": ["package.json", "package-lock.json", "tests/**", ".github/workflows/**"],
+      "paths": ["package.json", "package-lock.json", "tests/**", ".github/workflows/**", ".flyto/coding.yaml"],
       "documentation": ["README.md#testing", "README.md#configuration", "docs/FEATURES.md#test-and-publish-automation", "docs/RELEASE.md", ".github/workflows/README.md", "CONTRIBUTING.md"]
     }
   ],

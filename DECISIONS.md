@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-08-14 - SDK changes use the governed coding route
+
+Decision: keep pinned workspace installation and the complete SDK verifier in
+`.flyto/coding.yaml`. Public package copy, plugin contracts, and UI behavior
+require an independent Codex audit after that gate.
+
+Reason: the SDK crosses process, browser, and package-publication boundaries;
+a single committed entry keeps all of those checks attached to every change.
+
 ## 2026-06-21 - Project memory bootstrapped
 
 Decision: track Flyto2 product-line role, repo boundary, state, roadmap, tasks,
