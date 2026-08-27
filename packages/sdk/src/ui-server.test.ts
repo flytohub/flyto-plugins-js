@@ -19,6 +19,44 @@ function createTempUI(html: string = "<html><head></head><body>Hello</body></htm
   return dir;
 }
 
+/** Extract the first exact script element without a permissive tag-matching regex. */
+function firstScriptBody(html: string): string | undefined {
+  const lower = html.toLowerCase();
+  let cursor = 0;
+  const tagEnd = (start: number): number => {
+    let quote = "";
+    for (let index = start; index < html.length; index += 1) {
+      const char = html[index];
+      if (quote) {
+        if (char === quote) quote = "";
+      } else if (char === '"' || char === "'") quote = char;
+      else if (char === ">") return index;
+    }
+    return -1;
+  };
+  while (cursor < html.length) {
+    const opening = lower.indexOf("<script", cursor);
+    if (opening < 0) return undefined;
+    const boundary = lower[opening + 7];
+    if (boundary && boundary !== ">" && !/\s/.test(boundary)) {
+      cursor = opening + 7;
+      continue;
+    }
+    const openingEnd = tagEnd(opening + 7);
+    if (openingEnd < 0) return undefined;
+    let closing = lower.indexOf("</script", openingEnd + 1);
+    while (closing >= 0) {
+      const closingBoundary = lower[closing + 8];
+      if (!closingBoundary || closingBoundary === ">" || /\s/.test(closingBoundary)) break;
+      closing = lower.indexOf("</script", closing + 8);
+    }
+    if (closing < 0) return undefined;
+    if (tagEnd(closing + 8) < 0) return undefined;
+    return html.slice(openingEnd + 1, closing);
+  }
+  return undefined;
+}
+
 describe("UIServer", () => {
   let server: UIServer;
   let tmpDir: string;
@@ -122,6 +160,14 @@ describe("UIServer", () => {
   });
 
   describe("bridge injection — requestId script-injection hardening", () => {
+    it("finds exact script boundaries across case, nesting, and malformed lookalikes", () => {
+      assert.equal(firstScriptBody("<SCRIPT data-note='>'>safe()</ScRiPt >"), "safe()");
+      assert.equal(firstScriptBody("<scripture>bad()</scripture><script>good()</script>"), "good()");
+      assert.equal(firstScriptBody("<script>outer<script>nested</script>tail</script>"), "outer<script>nested");
+      assert.equal(firstScriptBody("<script data-note='unterminated>bad()</script>"), undefined);
+      assert.equal(firstScriptBody("<script>bad()</scripture>"), undefined);
+    });
+
     it("should neutralize a JS string-breakout payload in __flyto_req", async () => {
       tmpDir = createTempUI("<html><head><title>Test</title></head><body>content</body></html>");
       server = new UIServer({ uiRoot: tmpDir });
@@ -211,7 +257,7 @@ describe("UIServer", () => {
       server = new UIServer({ uiRoot: tmpDir });
       await server.start();
       const html = await (await fetch(server.buildUIUrl("index.html", "bridge-contract"))).text();
-      const script = html.match(/<script>([\s\S]*?)<\/script>/)?.[1];
+      const script = firstScriptBody(html);
       assert.ok(script, "injected bridge script missing");
 
       const listeners: Record<string, (event: Record<string, unknown>) => void> = {};

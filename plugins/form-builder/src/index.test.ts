@@ -4,8 +4,15 @@
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import type { JsonRpcRequest, JsonRpcResponse, UIStepContext } from "@flyto2/plugin-sdk";
 import { approvalForm, collectForm, plugin } from "./index.js";
+
+const uiSource = fs.readFileSync(
+  path.resolve("ui/index.html"),
+  "utf8",
+);
 
 /** Access private dispatch only to verify the registered runtime contract. */
 function getHandler() {
@@ -26,6 +33,41 @@ function uiContext(
 }
 
 describe("Form Builder Plugin", () => {
+  it("renders through an inert allowlisted DOM boundary", () => {
+    assert.ok(!uiSource.includes("app.innerHTML ="));
+    assert.ok(uiSource.includes("new DOMParser().parseFromString(html, 'text/html')"));
+    assert.ok(uiSource.includes("app.replaceChildren(sanitizeRenderedHtml(rendered))"));
+    for (const executableTag of ["'SCRIPT'", "'SVG'", "'MATH'", "'IFRAME'", "'OBJECT'", "'EMBED'"]) {
+      assert.ok(uiSource.includes(executableTag), `missing blocked subtree ${executableTag}`);
+    }
+    assert.ok(uiSource.includes("name.startsWith('on')"), "event attributes must be rejected");
+    for (const urlAttribute of ["href", "src", "action", "formaction", "xlink:href"]) {
+      assert.ok(!uiSource.match(new RegExp(`allowedAttributes[\\s\\S]{0,900}'${urlAttribute}'`)));
+    }
+  });
+
+  it("keeps hostile text as escaped form content", () => {
+    for (const payload of [
+      "<img src=x onerror=alert(1)>",
+      "<a href=javascript:alert(1)>x</a>",
+      "<a href=data:text/html,pwned>x</a>",
+      "<svg><a xlink:href=javascript:alert(1)>x</a></svg>",
+      "<math><mtext><img src=x onerror=alert(1)></mtext></math>",
+      "'\"\\|\r\n`[]",
+    ]) {
+      const escaped = payload
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+      assert.ok(!escaped.includes("<svg"));
+      assert.ok(!escaped.includes("<math"));
+      assert.ok(!escaped.includes("<img"));
+      assert.ok(!escaped.includes("<a "));
+    }
+  });
+
   it("registers both manifest step IDs", async () => {
     const response = await getHandler()({
       jsonrpc: "2.0",

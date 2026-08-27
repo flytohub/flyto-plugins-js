@@ -1,6 +1,7 @@
 # Generated Plugin Contracts
 
 > Generated from `plugins/*/plugin.yaml`. Do not edit by hand.
+> Markdown-sensitive contract text is encoded before table rendering.
 
 ## Form Builder
 

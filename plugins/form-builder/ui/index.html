@@ -775,13 +775,64 @@
       const app = document.getElementById('app');
       const stepType = props.stepType || 'collect_form';
 
-      if (stepType === 'approval_form') {
-        app.innerHTML = renderApprovalForm();
-      } else {
-        app.innerHTML = renderCollectForm();
-      }
+      const rendered = stepType === 'approval_form' ? renderApprovalForm() : renderCollectForm();
+      app.replaceChildren(sanitizeRenderedHtml(rendered));
 
       bindEvents();
+    }
+
+    /** Parse inertly, then copy only the form vocabulary into fresh HTML nodes. */
+    function sanitizeRenderedHtml(html) {
+      const parsed = new DOMParser().parseFromString(html, 'text/html');
+      const fragment = document.createDocumentFragment();
+      const allowedTags = new Set([
+        'BUTTON', 'DIV', 'HR', 'INPUT', 'SPAN', 'TABLE', 'TBODY', 'TD',
+        'TEXTAREA', 'TR',
+      ]);
+      const allowedAttributes = new Set([
+        'accept', 'class', 'data-accept', 'data-action', 'data-color-display',
+        'data-field', 'data-field-id', 'data-max', 'data-remove', 'data-slider-display',
+        'data-star', 'data-type', 'data-value', 'data-wizard-step', 'max', 'min',
+        'placeholder', 'rows', 'step', 'type', 'value',
+      ]);
+      const blockedSubtrees = new Set([
+        'BASE', 'EMBED', 'IFRAME', 'LINK', 'MATH', 'META', 'OBJECT', 'SCRIPT',
+        'STYLE', 'SVG', 'TEMPLATE',
+      ]);
+      const allowedStyles = new Set([
+        'margin:0',
+        'display:flex;align-items:center;gap:var(--flyto-space-3)',
+      ]);
+
+      function copyNode(source) {
+        if (source.nodeType === Node.TEXT_NODE) return document.createTextNode(source.textContent || '');
+        if (source.nodeType !== Node.ELEMENT_NODE) return null;
+        const tag = source.tagName.toUpperCase();
+        if (blockedSubtrees.has(tag)) return null;
+        if (!allowedTags.has(tag) || source.namespaceURI !== 'http://www.w3.org/1999/xhtml') return null;
+
+        const target = document.createElement(tag.toLowerCase());
+        for (const attribute of source.attributes) {
+          const name = attribute.name.toLowerCase();
+          if (name.startsWith('on')) continue;
+          if (name === 'style') {
+            if (allowedStyles.has(attribute.value)) target.setAttribute(name, attribute.value);
+          } else if (allowedAttributes.has(name)) {
+            target.setAttribute(name, attribute.value);
+          }
+        }
+        for (const child of source.childNodes) {
+          const safeChild = copyNode(child);
+          if (safeChild) target.appendChild(safeChild);
+        }
+        return target;
+      }
+
+      for (const child of parsed.body.childNodes) {
+        const safeChild = copyNode(child);
+        if (safeChild) fragment.appendChild(safeChild);
+      }
+      return fragment;
     }
 
     // ── Collect Form Renderer ────────────────────────────
