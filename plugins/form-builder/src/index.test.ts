@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as vm from "node:vm";
 import type { JsonRpcRequest, JsonRpcResponse, UIStepContext } from "@flyto2/plugin-sdk";
 import { approvalForm, collectForm, plugin } from "./index.js";
 
@@ -33,39 +34,99 @@ function uiContext(
 }
 
 describe("Form Builder Plugin", () => {
-  it("renders through an inert allowlisted DOM boundary", () => {
-    assert.ok(!uiSource.includes("app.innerHTML ="));
-    assert.ok(uiSource.includes("new DOMParser().parseFromString(html, 'text/html')"));
-    assert.ok(uiSource.includes("app.replaceChildren(sanitizeRenderedHtml(rendered))"));
-    for (const executableTag of ["'SCRIPT'", "'SVG'", "'MATH'", "'IFRAME'", "'OBJECT'", "'EMBED'"]) {
-      assert.ok(uiSource.includes(executableTag), `missing blocked subtree ${executableTag}`);
+  it("constructs the form DOM without dynamic HTML parsing sinks", () => {
+    for (const sink of ["DOMParser", "innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"]) {
+      assert.ok(!uiSource.includes(sink), `dynamic HTML sink remains: ${sink}`);
     }
-    assert.ok(uiSource.includes("name.startsWith('on')"), "event attributes must be rejected");
-    for (const urlAttribute of ["href", "src", "action", "formaction", "xlink:href"]) {
-      assert.ok(!uiSource.match(new RegExp(`allowedAttributes[\\s\\S]{0,900}'${urlAttribute}'`)));
-    }
+    assert.ok(uiSource.includes("document.createElement(tag)"));
+    assert.ok(uiSource.includes("node.textContent = String(text)"));
+    assert.ok(uiSource.includes("app.replaceChildren(stepType === 'approval_form'"));
+    assert.ok(!uiSource.includes("querySelector('[data-slider-display=\"' + fid"));
+    assert.ok(!uiSource.includes("querySelector('[data-color-display=\"' + fid"));
+    assert.ok(uiSource.includes("candidate.dataset.sliderDisplay === fid"));
+    assert.ok(uiSource.includes("candidate.dataset.colorDisplay === fid"));
   });
 
-  it("keeps hostile text as escaped form content", () => {
-    for (const payload of [
-      "<img src=x onerror=alert(1)>",
-      "<a href=javascript:alert(1)>x</a>",
-      "<a href=data:text/html,pwned>x</a>",
-      "<svg><a xlink:href=javascript:alert(1)>x</a></svg>",
-      "<math><mtext><img src=x onerror=alert(1)></mtext></math>",
-      "'\"\\|\r\n`[]",
-    ]) {
-      const escaped = payload
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-      assert.ok(!escaped.includes("<svg"));
-      assert.ok(!escaped.includes("<math"));
-      assert.ok(!escaped.includes("<img"));
-      assert.ok(!escaped.includes("<a "));
+  it("keeps hostile labels, values, placeholders, options, help, errors, and context as text", () => {
+    class FakeNode {
+      children: FakeNode[] = [];
+      dataset: Record<string, string> = {};
+      style: Record<string, string> = {};
+      className = "";
+      text = "";
+      value = "";
+      placeholder = "";
+      type = "";
+      constructor(readonly tagName: string) {}
+      appendChild(child: FakeNode) { this.children.push(child); return child; }
+      set textContent(value: string) { this.text = String(value); this.children = []; }
+      get textContent(): string { return this.text + this.children.map(child => child.textContent).join(""); }
     }
+    const document = {
+      createElement: (tag: string) => new FakeNode(tag.toUpperCase()),
+      createDocumentFragment: () => new FakeNode("#FRAGMENT"),
+      createTextNode: (text: string) => { const node = new FakeNode("#TEXT"); node.textContent = text; return node; },
+    };
+    const start = uiSource.indexOf("    function element(");
+    const end = uiSource.indexOf("    // ── Event Binding", start);
+    assert.ok(start > 0 && end > start, "renderer functions must be extractable");
+
+    const payloads = [
+      "<script>alert(1)</script>",
+      "<img src=x onerror=alert(1)>",
+      "<svg onload=alert(1)><a xlink:href=javascript:alert(1)>x</a></svg>",
+      "\"><input autofocus onfocus=alert(1)>",
+    ];
+    const context = vm.createContext({ document, String, JSON });
+    const rendererSource = uiSource.slice(start, end) + `
+      globalThis.testRender = { renderFields, renderFieldInput, renderSelect, renderApprovalForm };
+    `;
+    vm.runInContext(`
+      const values = { text: ${JSON.stringify(payloads[1])} };
+      const errors = { text: ${JSON.stringify(payloads[3])}, __comment: ${JSON.stringify(payloads[0])} };
+      const props = {
+        title: ${JSON.stringify(payloads[0])}, requireComment: true,
+        context: { [${JSON.stringify(payloads[2])}]: ${JSON.stringify(payloads[1])} }, fields: []
+      };
+      const getVisibleFields = fields => fields;
+      ${rendererSource}
+    `, context);
+    const renderers = (context as { testRender: Record<string, (...args: unknown[]) => FakeNode> }).testRender;
+    const fields = [{
+      id: "text", type: "text", label: payloads[0], placeholder: payloads[1],
+      hint: payloads[2], options: [{ value: payloads[3], label: payloads[2] }],
+    }];
+    const roots = [
+      renderers.renderFields(fields),
+      renderers.renderSelect({ ...fields[0], type: "select" }, payloads[3]),
+      renderers.renderApprovalForm(),
+    ];
+    const hostileFieldIds = [
+      `slider\"]\\[data-action=\"submit`,
+      `color']\\,[data-action='cancel`,
+      `brackets[]\\quotes\"'`,
+    ];
+    roots.push(
+      renderers.renderFieldInput({ id: hostileFieldIds[0], type: "slider" }),
+      renderers.renderFieldInput({ id: hostileFieldIds[1], type: "color" }),
+      renderers.renderFieldInput({ id: hostileFieldIds[2], type: "slider" }),
+    );
+    const nodes = roots.flatMap(function walk(node): FakeNode[] {
+      return [node, ...node.children.flatMap(walk)];
+    });
+    const activeTags = new Set(["SCRIPT", "IMG", "SVG", "MATH", "IFRAME", "OBJECT", "EMBED"]);
+    assert.deepEqual(nodes.filter(node => activeTags.has(node.tagName)), []);
+    assert.ok(nodes.every(node => !Object.keys(node).some(name => /^on/i.test(name))), "no handler properties are created");
+    const renderedText = roots.map(root => root.textContent).join("\n");
+    for (const payload of payloads) assert.ok(renderedText.includes(payload), `payload was not preserved literally: ${payload}`);
+    assert.ok(nodes.some(node => node.placeholder === payloads[1]), "hostile placeholder remains a property value");
+    assert.ok(nodes.some(node => node.value === payloads[1]), "hostile input value remains a property value");
+    assert.ok(nodes.some(node => node.dataset.fieldId === hostileFieldIds[0]));
+    assert.ok(nodes.some(node => node.dataset.sliderDisplay === hostileFieldIds[0]));
+    assert.ok(nodes.some(node => node.dataset.fieldId === hostileFieldIds[1]));
+    assert.ok(nodes.some(node => node.dataset.colorDisplay === hostileFieldIds[1]));
+    assert.ok(nodes.some(node => node.dataset.fieldId === hostileFieldIds[2]));
+    assert.ok(nodes.some(node => node.dataset.sliderDisplay === hostileFieldIds[2]));
   });
 
   it("registers both manifest step IDs", async () => {

@@ -775,64 +775,43 @@
       const app = document.getElementById('app');
       const stepType = props.stepType || 'collect_form';
 
-      const rendered = stepType === 'approval_form' ? renderApprovalForm() : renderCollectForm();
-      app.replaceChildren(sanitizeRenderedHtml(rendered));
+      app.replaceChildren(stepType === 'approval_form' ? renderApprovalForm() : renderCollectForm());
 
       bindEvents();
     }
 
-    /** Parse inertly, then copy only the form vocabulary into fresh HTML nodes. */
-    function sanitizeRenderedHtml(html) {
-      const parsed = new DOMParser().parseFromString(html, 'text/html');
-      const fragment = document.createDocumentFragment();
-      const allowedTags = new Set([
-        'BUTTON', 'DIV', 'HR', 'INPUT', 'SPAN', 'TABLE', 'TBODY', 'TD',
-        'TEXTAREA', 'TR',
-      ]);
-      const allowedAttributes = new Set([
-        'accept', 'class', 'data-accept', 'data-action', 'data-color-display',
-        'data-field', 'data-field-id', 'data-max', 'data-remove', 'data-slider-display',
-        'data-star', 'data-type', 'data-value', 'data-wizard-step', 'max', 'min',
-        'placeholder', 'rows', 'step', 'type', 'value',
-      ]);
-      const blockedSubtrees = new Set([
-        'BASE', 'EMBED', 'IFRAME', 'LINK', 'MATH', 'META', 'OBJECT', 'SCRIPT',
-        'STYLE', 'SVG', 'TEMPLATE',
-      ]);
-      const allowedStyles = new Set([
-        'margin:0',
-        'display:flex;align-items:center;gap:var(--flyto-space-3)',
-      ]);
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = String(text);
+      return node;
+    }
 
-      function copyNode(source) {
-        if (source.nodeType === Node.TEXT_NODE) return document.createTextNode(source.textContent || '');
-        if (source.nodeType !== Node.ELEMENT_NODE) return null;
-        const tag = source.tagName.toUpperCase();
-        if (blockedSubtrees.has(tag)) return null;
-        if (!allowedTags.has(tag) || source.namespaceURI !== 'http://www.w3.org/1999/xhtml') return null;
+    function append(parent, ...children) {
+      children.filter(Boolean).forEach(child => parent.appendChild(child));
+      return parent;
+    }
 
-        const target = document.createElement(tag.toLowerCase());
-        for (const attribute of source.attributes) {
-          const name = attribute.name.toLowerCase();
-          if (name.startsWith('on')) continue;
-          if (name === 'style') {
-            if (allowedStyles.has(attribute.value)) target.setAttribute(name, attribute.value);
-          } else if (allowedAttributes.has(name)) {
-            target.setAttribute(name, attribute.value);
-          }
-        }
-        for (const child of source.childNodes) {
-          const safeChild = copyNode(child);
-          if (safeChild) target.appendChild(safeChild);
-        }
-        return target;
-      }
+    function button(className, action, text) {
+      const node = element('button', className, text);
+      node.type = 'button';
+      node.dataset.action = action;
+      return node;
+    }
 
-      for (const child of parsed.body.childNodes) {
-        const safeChild = copyNode(child);
-        if (safeChild) fragment.appendChild(safeChild);
-      }
-      return fragment;
+    function requiredLabel(label, required) {
+      const node = element('div', 'field-label', label);
+      if (required) append(node, document.createTextNode(' '), element('span', 'field-required', '*'));
+      return node;
+    }
+
+    function inputElement(type, fieldId, value, placeholder) {
+      const node = element('input', 'flyto-input');
+      node.type = type;
+      node.dataset.fieldId = String(fieldId);
+      node.value = value === undefined || value === null ? '' : String(value);
+      if (placeholder !== undefined) node.placeholder = String(placeholder);
+      return node;
     }
 
     // ── Collect Form Renderer ────────────────────────────
@@ -843,63 +822,40 @@
         ? getVisibleFields(steps[currentStep].fields)
         : getVisibleFields(getAllFields());
 
-      let html = '';
-
-      // Header
-      html += '<div class="header">';
-      html += '<div class="header-left">';
-      html += '<div class="header-title">' + esc(props.title || 'Form') + '</div>';
-      if (props.description) {
-        html += '<div class="header-desc">' + esc(props.description) + '</div>';
-      }
-      html += '</div>';
-      html += '<div class="header-actions">';
-      html += '<button class="flyto-btn flyto-btn-ghost" data-action="cancel">Cancel</button>';
-      if (!isWizard) {
-        html += '<button class="flyto-btn flyto-btn-primary" data-action="submit">' + esc(props.submitLabel || 'Submit') + '</button>';
-      }
-      html += '</div></div>';
+      const fragment = document.createDocumentFragment();
+      const headerLeft = append(element('div', 'header-left'), element('div', 'header-title', props.title || 'Form'));
+      if (props.description) append(headerLeft, element('div', 'header-desc', props.description));
+      const headerActions = append(element('div', 'header-actions'), button('flyto-btn flyto-btn-ghost', 'cancel', 'Cancel'));
+      if (!isWizard) append(headerActions, button('flyto-btn flyto-btn-primary', 'submit', props.submitLabel || 'Submit'));
+      append(fragment, append(element('div', 'header'), headerLeft, headerActions));
 
       // Wizard steps bar
       if (isWizard) {
-        html += '<div class="wizard-steps">';
+        const wizard = element('div', 'wizard-steps');
         steps.forEach((s, i) => {
-          if (i > 0) html += '<div class="wizard-connector' + (i <= currentStep ? ' completed' : '') + '"></div>';
+          if (i > 0) append(wizard, element('div', 'wizard-connector' + (i <= currentStep ? ' completed' : '')));
           const cls = i === currentStep ? 'active' : (i < currentStep ? 'completed' : '');
-          html += '<div class="wizard-step ' + cls + '" data-wizard-step="' + i + '">';
-          html += '<div class="wizard-dot">' + (i < currentStep ? '✓' : (i + 1)) + '</div>';
-          html += '<span>' + esc(s.label) + '</span>';
-          html += '</div>';
+          const step = element('div', 'wizard-step ' + cls);
+          step.dataset.wizardStep = String(i);
+          append(step, element('div', 'wizard-dot', i < currentStep ? '✓' : (i + 1)), element('span', '', s.label));
+          append(wizard, step);
         });
-        html += '</div>';
+        append(fragment, wizard);
       }
 
-      // Form fields
-      html += '<div class="form-body">';
-      html += renderFields(fields);
-      html += '</div>';
-
-      // Footer
-      html += '<div class="footer">';
-      html += '<div class="footer-left">';
+      append(fragment, append(element('div', 'form-body'), renderFields(fields)));
+      const footerLeft = element('div', 'footer-left', isWizard ? 'Step ' + (currentStep + 1) + ' of ' + steps.length : '');
+      const footerRight = element('div', 'footer-right');
       if (isWizard) {
-        html += 'Step ' + (currentStep + 1) + ' of ' + steps.length;
-      }
-      html += '</div>';
-      html += '<div class="footer-right">';
-      if (isWizard) {
-        if (currentStep > 0) {
-          html += '<button class="flyto-btn flyto-btn-secondary" data-action="prev">Back</button>';
-        }
+        if (currentStep > 0) append(footerRight, button('flyto-btn flyto-btn-secondary', 'prev', 'Back'));
         if (currentStep < steps.length - 1) {
-          html += '<button class="flyto-btn flyto-btn-primary" data-action="next">Next</button>';
+          append(footerRight, button('flyto-btn flyto-btn-primary', 'next', 'Next'));
         } else {
-          html += '<button class="flyto-btn flyto-btn-primary" data-action="submit">' + esc(props.submitLabel || 'Submit') + '</button>';
+          append(footerRight, button('flyto-btn flyto-btn-primary', 'submit', props.submitLabel || 'Submit'));
         }
       }
-      html += '</div></div>';
-
-      return html;
+      append(fragment, append(element('div', 'footer'), footerLeft, footerRight));
+      return fragment;
     }
 
     // ── Approval Form Renderer ───────────────────────────
@@ -907,94 +863,70 @@
       const ctx = props.context || {};
       const fields = getVisibleFields(props.fields || []);
 
-      let html = '';
-
-      // Header
-      html += '<div class="header">';
-      html += '<div class="header-left">';
-      html += '<div class="header-title">' + esc(props.title || 'Approval Required') + '</div>';
-      html += '</div>';
-      html += '<div class="header-actions">';
-      html += '<button class="flyto-btn flyto-btn-ghost" data-action="cancel">Close</button>';
-      html += '</div></div>';
-
-      html += '<div class="form-body">';
+      const fragment = document.createDocumentFragment();
+      append(fragment, append(element('div', 'header'),
+        append(element('div', 'header-left'), element('div', 'header-title', props.title || 'Approval Required')),
+        append(element('div', 'header-actions'), button('flyto-btn flyto-btn-ghost', 'cancel', 'Close'))));
+      const body = element('div', 'form-body');
 
       // Context table
       const ctxKeys = Object.keys(ctx);
       if (ctxKeys.length > 0) {
-        html += '<div class="section-title">Context</div>';
-        html += '<table class="context-table">';
+        append(body, element('div', 'section-title', 'Context'));
+        const table = element('table', 'context-table');
         ctxKeys.forEach(k => {
           let v = ctx[k];
           if (typeof v === 'object') v = JSON.stringify(v, null, 2);
-          html += '<tr><td>' + esc(k) + '</td><td>' + esc(String(v)) + '</td></tr>';
+          append(table, append(element('tr'), element('td', '', k), element('td', '', String(v))));
         });
-        html += '</table>';
+        append(body, table);
       }
 
-      // Comment field
-      html += '<div class="field">';
-      html += '<div class="field-label">Comment' + (props.requireComment ? ' <span class="field-required">*</span>' : '') + '</div>';
-      html += '<textarea class="flyto-input" data-field-id="__comment" placeholder="Add a comment...">' + esc(values.__comment || '') + '</textarea>';
-      if (errors.__comment) html += '<div class="field-error">' + esc(errors.__comment) + '</div>';
-      html += '</div>';
+      const comment = append(element('div', 'field'), requiredLabel('Comment', props.requireComment));
+      const textarea = element('textarea', 'flyto-input');
+      textarea.dataset.fieldId = '__comment';
+      textarea.placeholder = 'Add a comment...';
+      textarea.value = String(values.__comment || '');
+      append(comment, textarea);
+      if (errors.__comment) append(comment, element('div', 'field-error', errors.__comment));
+      append(body, comment);
 
       // Additional fields
       if (fields.length > 0) {
-        html += '<hr class="flyto-divider">';
-        html += renderFields(fields);
+        append(body, element('hr', 'flyto-divider'), renderFields(fields));
       }
-
-      html += '</div>';
-
-      // Footer with approve / reject
-      html += '<div class="footer">';
-      html += '<div class="footer-left"></div>';
-      html += '<div class="footer-right">';
-      html += '<button class="flyto-btn flyto-btn-danger" data-action="reject">' + esc(props.rejectLabel || 'Reject') + '</button>';
-      html += '<button class="flyto-btn flyto-btn-success" data-action="approve">' + esc(props.approveLabel || 'Approve') + '</button>';
-      html += '</div></div>';
-
-      return html;
+      append(fragment, body, append(element('div', 'footer'), element('div', 'footer-left'), append(element('div', 'footer-right'),
+        button('flyto-btn flyto-btn-danger', 'reject', props.rejectLabel || 'Reject'),
+        button('flyto-btn flyto-btn-success', 'approve', props.approveLabel || 'Approve'))));
+      return fragment;
     }
 
     // ── Field Renderers ──────────────────────────────────
     function renderFields(fields) {
-      let html = '';
+      const fragment = document.createDocumentFragment();
       fields.forEach(f => {
         if (f.type === 'section') {
-          html += '<div class="form-section">';
-          html += '<div class="section-title">' + esc(f.label || '') + '</div>';
-          if (f.description) html += '<div class="section-desc">' + esc(f.description) + '</div>';
-          html += '</div>';
+          const section = append(element('div', 'form-section'), element('div', 'section-title', f.label || ''));
+          if (f.description) append(section, element('div', 'section-desc', f.description));
+          append(fragment, section);
           return;
         }
         if (f.type === 'divider') {
-          html += '<hr class="flyto-divider">';
+          append(fragment, element('hr', 'flyto-divider'));
           return;
         }
         if (f.type === 'step_break') return;
 
         const errCls = errors[f.id] ? ' has-error' : '';
-        html += '<div class="field' + errCls + '" data-field="' + esc(f.id) + '">';
-
-        if (f.type !== 'checkbox' && f.type !== 'toggle') {
-          html += '<div class="field-label">' + esc(f.label || f.id);
-          if (f.required) html += ' <span class="field-required">*</span>';
-          html += '</div>';
-        }
-        if (f.hint) html += '<div class="field-hint">' + esc(f.hint) + '</div>';
-
-        html += renderFieldInput(f);
-
-        if (errors[f.id]) {
-          html += '<div class="field-error">' + esc(errors[f.id]) + '</div>';
-        }
-
-        html += '</div>';
+        const field = element('div', 'field' + errCls);
+        field.dataset.field = String(f.id);
+        if (f.type !== 'checkbox' && f.type !== 'toggle') append(field, requiredLabel(f.label || f.id, f.required));
+        if (f.hint) append(field, element('div', 'field-hint', f.hint));
+        append(field, renderFieldInput(f));
+        if (errors[f.id]) append(field, element('div', 'field-error', errors[f.id]));
+        append(fragment, field);
       });
-      return html;
+      return fragment;
     }
 
     function renderFieldInput(f) {
@@ -1007,19 +939,22 @@
         case 'url':
         case 'phone':
           const inputType = f.type === 'phone' ? 'tel' : (f.type === 'url' ? 'url' : (f.type === 'email' ? 'email' : 'text'));
-          return '<input class="flyto-input" type="' + inputType + '" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+          return inputElement(inputType, id, v || '', f.placeholder || '');
 
         case 'number':
-          return '<input class="flyto-input" type="number" data-field-id="' + esc(id) + '" value="' + esc(v !== undefined ? v : '') + '" placeholder="' + esc(f.placeholder || '') + '"' +
-            (f.min !== undefined ? ' min="' + f.min + '"' : '') +
-            (f.max !== undefined ? ' max="' + f.max + '"' : '') +
-            (f.step !== undefined ? ' step="' + f.step + '"' : '') + '>';
+          const number = inputElement('number', id, v !== undefined ? v : '', f.placeholder || '');
+          if (f.min !== undefined) number.min = String(f.min);
+          if (f.max !== undefined) number.max = String(f.max);
+          if (f.step !== undefined) number.step = String(f.step);
+          return number;
 
         case 'textarea':
-          return '<textarea class="flyto-input" data-field-id="' + esc(id) + '" placeholder="' + esc(f.placeholder || '') + '" rows="' + (f.rows || 3) + '">' + esc(v || '') + '</textarea>';
+          const area = element('textarea', 'flyto-input');
+          area.dataset.fieldId = String(id); area.placeholder = String(f.placeholder || ''); area.rows = f.rows || 3; area.value = String(v || '');
+          return area;
 
         case 'password':
-          return '<input class="flyto-input" type="password" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+          return inputElement('password', id, v || '', f.placeholder || '');
 
         case 'select':
           return renderSelect(f, v);
@@ -1031,58 +966,55 @@
           return renderRadio(f, v);
 
         case 'checkbox':
-          return '<div class="checkbox-row' + (v ? ' checked' : '') + '" data-field-id="' + esc(id) + '" data-type="checkbox">' +
-            '<div class="checkbox-box">✓</div>' +
-            '<span class="field-label" style="margin:0">' + esc(f.label || f.id) +
-            (f.required ? ' <span class="field-required">*</span>' : '') +
-            '</span></div>';
+          const checkbox = element('div', 'checkbox-row' + (v ? ' checked' : ''));
+          checkbox.dataset.fieldId = String(id); checkbox.dataset.type = 'checkbox';
+          const checkboxLabel = requiredLabel(f.label || f.id, f.required); checkboxLabel.style.margin = '0';
+          return append(checkbox, element('div', 'checkbox-box', '✓'), checkboxLabel);
 
         case 'toggle':
-          return '<div style="display:flex;align-items:center;gap:var(--flyto-space-3)">' +
-            '<div class="toggle-track' + (v ? ' on' : '') + '" data-field-id="' + esc(id) + '" data-type="toggle">' +
-            '<div class="toggle-thumb"></div></div>' +
-            '<span class="field-label" style="margin:0">' + esc(f.label || f.id) +
-            (f.required ? ' <span class="field-required">*</span>' : '') +
-            '</span></div>';
+          const toggleRow = element('div'); toggleRow.style.display = 'flex'; toggleRow.style.alignItems = 'center'; toggleRow.style.gap = 'var(--flyto-space-3)';
+          const toggle = append(element('div', 'toggle-track' + (v ? ' on' : '')), element('div', 'toggle-thumb'));
+          toggle.dataset.fieldId = String(id); toggle.dataset.type = 'toggle';
+          const toggleLabel = requiredLabel(f.label || f.id, f.required); toggleLabel.style.margin = '0';
+          return append(toggleRow, toggle, toggleLabel);
 
         case 'date':
-          return '<input class="flyto-input" type="date" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+          return inputElement('date', id, v || '');
 
         case 'time':
-          return '<input class="flyto-input" type="time" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+          return inputElement('time', id, v || '');
 
         case 'datetime':
-          return '<input class="flyto-input" type="datetime-local" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '">';
+          return inputElement('datetime-local', id, v || '');
 
         case 'slider':
           const min = f.min || 0;
           const max = f.max || 100;
           const step = f.step || 1;
           const sv = v !== undefined ? v : min;
-          return '<div class="slider-wrapper">' +
-            '<input type="range" data-field-id="' + esc(id) + '" min="' + min + '" max="' + max + '" step="' + step + '" value="' + sv + '">' +
-            '<span class="slider-value" data-slider-display="' + esc(id) + '">' + sv + '</span></div>';
+          const slider = inputElement('range', id, sv); slider.className = ''; slider.min = String(min); slider.max = String(max); slider.step = String(step);
+          const display = element('span', 'slider-value', sv); display.dataset.sliderDisplay = String(id);
+          return append(element('div', 'slider-wrapper'), slider, display);
 
         case 'rating':
           const rv = v || 0;
           const maxStars = f.max || 5;
-          let stars = '<div class="rating-row" data-field-id="' + esc(id) + '" data-type="rating" data-max="' + maxStars + '">';
+          const stars = element('div', 'rating-row'); stars.dataset.fieldId = String(id); stars.dataset.type = 'rating'; stars.dataset.max = String(maxStars);
           for (let i = 1; i <= maxStars; i++) {
-            stars += '<span class="rating-star' + (i <= rv ? ' active' : '') + '" data-star="' + i + '">★</span>';
+            const star = element('span', 'rating-star' + (i <= rv ? ' active' : ''), '★'); star.dataset.star = String(i); append(stars, star);
           }
-          stars += '</div>';
           return stars;
 
         case 'color':
-          return '<div class="color-row">' +
-            '<input type="color" data-field-id="' + esc(id) + '" value="' + esc(v || '#8b5cf6') + '">' +
-            '<span class="color-value" data-color-display="' + esc(id) + '">' + esc(v || '#8b5cf6') + '</span></div>';
+          const color = inputElement('color', id, v || '#8b5cf6'); color.className = '';
+          const colorDisplay = element('span', 'color-value', v || '#8b5cf6'); colorDisplay.dataset.colorDisplay = String(id);
+          return append(element('div', 'color-row'), color, colorDisplay);
 
         case 'file':
           return renderFileUpload(f, v);
 
         default:
-          return '<input class="flyto-input" type="text" data-field-id="' + esc(id) + '" value="' + esc(v || '') + '" placeholder="' + esc(f.placeholder || '') + '">';
+          return inputElement('text', id, v || '', f.placeholder || '');
       }
     }
 
@@ -1091,90 +1023,75 @@
       const selected = options.find(o => (o.value || o) === val);
       const displayText = selected ? (selected.label || selected.value || selected) : '';
 
-      let html = '<div class="select-wrapper" data-field-id="' + esc(f.id) + '" data-type="select">';
-      html += '<button class="select-trigger" type="button">';
-      if (displayText) {
-        html += esc(displayText);
-      } else {
-        html += '<span class="placeholder">' + esc(f.placeholder || 'Select...') + '</span>';
-      }
-      html += '</button>';
-      html += '<div class="select-arrow">▼</div>';
-      html += '<div class="select-dropdown">';
+      const wrapper = element('div', 'select-wrapper'); wrapper.dataset.fieldId = String(f.id); wrapper.dataset.type = 'select';
+      const trigger = element('button', 'select-trigger'); trigger.type = 'button';
+      append(trigger, displayText ? document.createTextNode(String(displayText)) : element('span', 'placeholder', f.placeholder || 'Select...'));
+      const dropdown = element('div', 'select-dropdown');
       options.forEach(o => {
         const optVal = o.value !== undefined ? o.value : o;
         const optLabel = o.label || optVal;
         const selCls = optVal === val ? ' selected' : '';
-        html += '<div class="select-option' + selCls + '" data-value="' + esc(String(optVal)) + '">' + esc(String(optLabel)) + '</div>';
+        const option = element('div', 'select-option' + selCls, optLabel); option.dataset.value = String(optVal); append(dropdown, option);
       });
-      html += '</div></div>';
-      return html;
+      return append(wrapper, trigger, element('div', 'select-arrow', '▼'), dropdown);
     }
 
     function renderMultiSelect(f, selected) {
       const options = f.options || [];
-      let html = '';
+      const fragment = document.createDocumentFragment();
 
       // Tags
       if (selected.length > 0) {
-        html += '<div class="multi-tags">';
+        const tags = element('div', 'multi-tags');
         selected.forEach(sv => {
           const opt = options.find(o => (o.value || o) === sv);
           const label = opt ? (opt.label || opt.value || opt) : sv;
-          html += '<span class="multi-tag">' + esc(String(label)) + ' <span class="multi-tag-remove" data-field-id="' + esc(f.id) + '" data-remove="' + esc(String(sv)) + '">✕</span></span>';
+          const remove = element('span', 'multi-tag-remove', '✕'); remove.dataset.fieldId = String(f.id); remove.dataset.remove = String(sv);
+          append(tags, append(element('span', 'multi-tag'), document.createTextNode(String(label) + ' '), remove));
         });
-        html += '</div>';
+        append(fragment, tags);
       }
 
       // Dropdown
-      html += '<div class="select-wrapper" data-field-id="' + esc(f.id) + '" data-type="multiselect">';
-      html += '<button class="select-trigger" type="button">';
-      html += '<span class="placeholder">' + esc(f.placeholder || 'Select options...') + '</span>';
-      html += '</button>';
-      html += '<div class="select-arrow">▼</div>';
-      html += '<div class="select-dropdown">';
+      const wrapper = element('div', 'select-wrapper'); wrapper.dataset.fieldId = String(f.id); wrapper.dataset.type = 'multiselect';
+      const trigger = append(element('button', 'select-trigger'), element('span', 'placeholder', f.placeholder || 'Select options...')); trigger.type = 'button';
+      const dropdown = element('div', 'select-dropdown');
       options.forEach(o => {
         const optVal = o.value !== undefined ? o.value : o;
         const optLabel = o.label || optVal;
         const selCls = selected.includes(optVal) ? ' selected' : '';
-        html += '<div class="select-option' + selCls + '" data-value="' + esc(String(optVal)) + '">' + esc(String(optLabel)) + '</div>';
+        const option = element('div', 'select-option' + selCls, optLabel); option.dataset.value = String(optVal); append(dropdown, option);
       });
-      html += '</div></div>';
-      return html;
+      append(fragment, append(wrapper, trigger, element('div', 'select-arrow', '▼'), dropdown));
+      return fragment;
     }
 
     function renderRadio(f, val) {
       const options = f.options || [];
-      let html = '<div class="radio-group" data-field-id="' + esc(f.id) + '" data-type="radio">';
+      const group = element('div', 'radio-group'); group.dataset.fieldId = String(f.id); group.dataset.type = 'radio';
       options.forEach(o => {
         const optVal = o.value !== undefined ? o.value : o;
         const optLabel = o.label || optVal;
         const selCls = optVal === val ? ' selected' : '';
-        html += '<div class="radio-row' + selCls + '" data-value="' + esc(String(optVal)) + '">';
-        html += '<div class="radio-dot-outer"><div class="radio-dot-inner"></div></div>';
-        html += '<span class="radio-label">' + esc(String(optLabel)) + '</span>';
-        html += '</div>';
+        const row = element('div', 'radio-row' + selCls); row.dataset.value = String(optVal);
+        append(group, append(row, append(element('div', 'radio-dot-outer'), element('div', 'radio-dot-inner')), element('span', 'radio-label', optLabel)));
       });
-      html += '</div>';
-      return html;
+      return group;
     }
 
     function renderFileUpload(f, val) {
       const accept = f.accept || '';
-      let html = '<div class="file-drop" data-field-id="' + esc(f.id) + '" data-type="file" data-accept="' + esc(accept) + '">';
-      html += '<input type="file"' + (accept ? ' accept="' + esc(accept) + '"' : '') + '>';
-      html += '📎 Click or drop file here';
-      html += '</div>';
+      const fragment = document.createDocumentFragment();
+      const drop = element('div', 'file-drop'); drop.dataset.fieldId = String(f.id); drop.dataset.type = 'file'; drop.dataset.accept = String(accept);
+      const fileInput = element('input'); fileInput.type = 'file'; if (accept) fileInput.accept = String(accept);
+      append(drop, fileInput, document.createTextNode('📎 Click or drop file here'));
+      append(fragment, drop);
 
       if (val && val.name) {
-        html += '<div class="file-preview">';
-        html += '<span class="file-preview-name">' + esc(val.name) + '</span>';
-        html += '<span class="file-preview-size">' + formatSize(val.size || 0) + '</span>';
-        html += '<button class="file-remove" data-field-id="' + esc(f.id) + '" data-type="file-remove">✕</button>';
-        html += '</div>';
+        const remove = element('button', 'file-remove', '✕'); remove.type = 'button'; remove.dataset.fieldId = String(f.id); remove.dataset.type = 'file-remove';
+        append(fragment, append(element('div', 'file-preview'), element('span', 'file-preview-name', val.name), element('span', 'file-preview-size', formatSize(val.size || 0)), remove));
       }
-
-      return html;
+      return fragment;
     }
 
     // ── Event Binding ────────────────────────────────────
@@ -1328,7 +1245,8 @@
         const fid = el.dataset.fieldId;
         el.addEventListener('input', e => {
           values[fid] = Number(e.target.value);
-          const disp = app.querySelector('[data-slider-display="' + fid + '"]');
+          const disp = Array.from(app.querySelectorAll('[data-slider-display]'))
+            .find(candidate => candidate.dataset.sliderDisplay === fid);
           if (disp) disp.textContent = e.target.value;
         });
       });
@@ -1349,7 +1267,8 @@
         const fid = el.dataset.fieldId;
         el.addEventListener('input', e => {
           values[fid] = e.target.value;
-          const disp = app.querySelector('[data-color-display="' + fid + '"]');
+          const disp = Array.from(app.querySelectorAll('[data-color-display]'))
+            .find(candidate => candidate.dataset.colorDisplay === fid);
           if (disp) disp.textContent = e.target.value;
         });
       });
@@ -1413,12 +1332,6 @@
     }
 
     // ── Utils ────────────────────────────────────────────
-    function esc(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
     function formatSize(bytes) {
       if (bytes < 1024) return bytes + ' B';
       if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';

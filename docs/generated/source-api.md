@@ -147,20 +147,22 @@ Every named production class, interface, type, function, constructor, and method
 | function | `handleSubmit(extraData)` | [L743](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L743) | Validate, normalize values and timing metadata, then submit through the bridge. |
 | function | `handleCancel()` | [L769](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L769) | Cancel the active interaction through the bridge. |
 | function | `render()` | [L774](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L774) | Render the selected form mode and bind its event handlers. |
-| function | `sanitizeRenderedHtml(html)` | [L785](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L785) | Parse inertly, then copy only the form vocabulary into fresh HTML nodes. |
-| function | `copyNode(source)` | [L807](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L807) | Parse inertly, then copy only the form vocabulary into fresh HTML nodes. |
-| function | `renderCollectForm()` | [L839](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L839) | Build the collection form, wizard progress, fields, and actions. |
-| function | `renderApprovalForm()` | [L906](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L906) | Build review context, optional fields, comment, and decision actions. |
-| function | `renderFields(fields)` | [L963](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L963) | Render structural and interactive field definitions with errors. |
-| function | `renderFieldInput(f)` | [L1000](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1000) | Dispatch one field definition to its matching input renderer. |
-| function | `renderSelect(f, val)` | [L1089](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1089) | Render a single-select trigger and option list. |
-| function | `renderMultiSelect(f, selected)` | [L1114](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1114) | Render selected tags and a multi-select option list. |
-| function | `renderRadio(f, val)` | [L1146](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1146) | Render one radio option group. |
-| function | `renderFileUpload(f, val)` | [L1162](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1162) | Render the file drop target and selected-file summary. |
-| function | `bindEvents()` | [L1181](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1181) | Attach action, input, selection, file, and wizard interactions after rendering. |
-| function | `handleFile(fieldId, file)` | [L1401](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1401) | Read one selected file as a data URL and retain its metadata. |
-| function | `esc(str)` | [L1416](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1416) | HTML-escape a dynamic value before string rendering. |
-| function | `formatSize(bytes)` | [L1422](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1422) | Format a byte count as B, KB, or MB. |
+| function | `element(tag, className, text)` | [L783](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L783) | Create one HTML element and assign its class and literal text without parsing markup. |
+| function | `append(parent, ...children)` | [L790](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L790) | Append the provided DOM children and return their parent node. |
+| function | `button(className, action, text)` | [L795](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L795) | Create an inert button with an allowlisted action data property. |
+| function | `requiredLabel(label, required)` | [L802](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L802) | Create a field label and optional required marker from text nodes. |
+| function | `inputElement(type, fieldId, value, placeholder)` | [L808](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L808) | Create a typed form input and assign its field, value, and placeholder properties. |
+| function | `renderCollectForm()` | [L818](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L818) | Build the collection form, wizard progress, fields, and actions. |
+| function | `renderApprovalForm()` | [L862](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L862) | Build review context, optional fields, comment, and decision actions. |
+| function | `renderFields(fields)` | [L905](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L905) | Render structural and interactive field definitions with errors. |
+| function | `renderFieldInput(f)` | [L932](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L932) | Dispatch one field definition to its matching input renderer. |
+| function | `renderSelect(f, val)` | [L1021](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1021) | Render a single-select trigger and option list. |
+| function | `renderMultiSelect(f, selected)` | [L1039](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1039) | Render selected tags and a multi-select option list. |
+| function | `renderRadio(f, val)` | [L1069](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1069) | Render one radio option group. |
+| function | `renderFileUpload(f, val)` | [L1082](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1082) | Render the file drop target and selected-file summary. |
+| function | `bindEvents()` | [L1098](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1098) | Attach action, input, selection, file, and wizard interactions after rendering. |
+| function | `handleFile(fieldId, file)` | [L1320](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1320) | Read one selected file as a data URL and retain its metadata. |
+| function | `formatSize(bytes)` | [L1335](https://github.com/flytohub/flyto-plugins-js/blob/main/plugins/form-builder/ui/index.html#L1335) | Format a byte count as B, KB, or MB. |
 
 ## `plugins/image-crop/src/index.ts`
 
