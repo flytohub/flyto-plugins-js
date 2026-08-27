@@ -1,6 +1,7 @@
 # Generated UI Token Reference
 
 > Generated from `packages/ui-tokens/src/tokens.css`. Do not edit by hand.
+> Markdown-sensitive token text is encoded before table rendering.
 
 ## CSS Custom Properties
 
